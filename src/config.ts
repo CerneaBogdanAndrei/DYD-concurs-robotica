@@ -21,7 +21,7 @@ export const J5_MIN = 0;
 export const J5_MAX = 180;
 
 export const GRIP_OPEN = 60; // (!) gheara deschisă (puțin mai largă decât cubul)
-export const GRIP_CLOSED = 135; // (!) gheara strânsă pe cub (nu forțați servo-ul peste 150)
+export const GRIP_CLOSED = 140; // (!) gheara strânsă pe cub (nu forțați servo-ul peste 150); 135 abia atingea cubul de 29 mm (citea 133, goală 134)
 
 // Gheara în mm (date de echipă 2026-10-29). Deschiderile sunt INTERIOARE (între degete); legătura unghi servo 6
 // -> mm se măsoară cu `npm run calib -- gheara UNGHI` și se ține în calib.json. Fără ea, gheara se deschide
