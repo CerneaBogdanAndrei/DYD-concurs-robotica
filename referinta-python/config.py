@@ -4,11 +4,11 @@ Valorile marcate cu (!) TREBUIE verificate/masurate in laborator.
 """
 
 # ---------------------------------------------------------------- BRAT
-# Geometria Dofbot (aprox. dupa URDF Yahboom). Masurati cu rigla.
-L1 = 105.0   # (!) masa -> axa servo 2 (umar)
-L2 = 83.0    # axa servo 2 -> axa servo 3
-L3 = 83.0    # axa servo 3 -> axa servo 4
-L4 = 175.0   # (!) axa servo 4 -> punctul de prindere (mijlocul degetelor)
+# Geometria Dofbot din manualul Yahboom / URDF (dofbot.urdf), 2026-10-29 (la fel ca src/config.ts).
+L1 = 104.5   # masa -> axa servo 2 (umar): 61,0 + 43,5
+L2 = 82.85   # axa servo 2 -> axa servo 3
+L3 = 82.85   # axa servo 3 -> axa servo 4
+L4 = 183.85  # axa servo 4 -> punctul de prindere: 73,85 (-> axa servo 5) + 110,0 (-> mijlocul degetelor)
 
 # Conventie folosita (verificata cu `calibrate.py celule`):
 #   servo 2/3/4 = 90 -> segment drept in sus; valori mai mici = inclinare in fata.

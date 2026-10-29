@@ -4,11 +4,12 @@
 // Parametrii de cameră și culori HSV țin de viziune (colegii) și nu sunt aici.
 
 // ---------------------------------------------------------------- BRAȚ
-// Geometria Dofbot (aprox. după URDF Yahboom). Măsurați cu rigla.
-export const L1 = 105.0; // (!) masă -> axa servo 2 (umăr)
-export const L2 = 83.0; // axa servo 2 -> axa servo 3
-export const L3 = 83.0; // axa servo 3 -> axa servo 4
-export const L4 = 175.0; // (!) axa servo 4 -> punctul de prindere (mijlocul degetelor)
+// Geometria Dofbot din manualul Yahboom / URDF (dofbot.urdf), primită de la echipă 2026-10-29.
+// Unghiuri de rotație (manual): servo 1..4 și 6: 0..180, servo 5: 0..270 (vezi JOINT_MIN / JOINT_MAX).
+export const L1 = 104.5; // masă -> axa servo 2 (umăr): 61,0 (bază -> servo 1) + 43,5 (servo 1 -> servo 2)
+export const L2 = 82.85; // axa servo 2 -> axa servo 3
+export const L3 = 82.85; // axa servo 3 -> axa servo 4
+export const L4 = 183.85; // axa servo 4 -> punctul de prindere: 73,85 (-> axa servo 5) + 110,0 (-> mijlocul degetelor)
 
 // Convenție (verificată cu `calib celule`):
 //   servo 2/3/4 = 90 -> segment drept în sus; valori mai mici = înclinare în față.

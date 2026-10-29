@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { PITCH_CANDIDATES } from "../src/config.js";
+import { L1, L2, L3, L4, PITCH_CANDIDATES } from "../src/config.js";
 import { fk, ik, ikPlanar, wristForYaw } from "../src/kinematics.js";
 
 const close = (a: number, b: number, eps: number, what: string) =>
@@ -17,7 +17,7 @@ describe("cinematică", () => {
     const p = fk([90, 90, 90, 90]);
     close(p.x, 0, 1e-9, "x");
     close(p.y, 0, 1e-9, "y");
-    close(p.z, 105 + 83 + 83 + 175, 1e-9, "z");
+    close(p.z, L1 + L2 + L3 + L4, 1e-9, "z");
     close(p.pitch, 90, 1e-9, "pitch");
   });
 

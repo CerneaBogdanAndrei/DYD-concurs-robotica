@@ -23,7 +23,7 @@ async function recorded() {
   return { robot, events };
 }
 
-// Unghiurile se rotunjesc la grade întregi (int(round()) din referință): ~1° pe L4 = 175 mm ≈ 3 mm.
+// Unghiurile se rotunjesc la grade întregi (int(round()) din referință): ~1° pe L4 = 184 mm ≈ 3 mm.
 const TOL = 5;
 
 const moves = (ev: Awaited<ReturnType<typeof recorded>>["events"]) =>

@@ -40,3 +40,18 @@ Foaia `medium` e mutată cu ~3 cm mai departe de robot decât poziția inițial�
   (corecție de 0,23 celule ≈ 1 cm spre robot, pe direcția liniilor). Rezultatul fizic: de confirmat de echipă.
 - Serviciul nu primește o poziție corectată la `place` (doar la `pick`, prin `uv`): o corecție permanentă pe niveluri
   trebuie făcută în serviciul colegilor (model cinematic) sau reînvățând colțurile la aceeași înălțime.
+
+## Cotele din manualul Yahboom (2026-10-29, seara)
+- `src/config.ts` și `referinta-python/config.py`: L1 104,5 (61,0 + 43,5), L2 = L3 82,85, L4 183,85 (73,85 până la axa
+  servo 5 + 110,0 până la mijlocul degetelor). Unghiurile de rotație din manual (servo 1..4 și 6: 0..180, servo 5: 0..270)
+  erau deja în `JOINT_MIN` / `JOINT_MAX`.
+- `calib.json`: colțurile `small` recalculate cu FK-ul nou din aceleași unghiuri învățate (r0c0 [95,28,54,55],
+  r0c2 [80,33,42,66], r2c0 [96,49,30,39], r2c2 [79,50,33,36]). La nivelul 0, gheara ajunge fizic în aceleași locuri.
+  Modelul: pas coloane 35,5 mm, linii 33,8 mm, z prindere 1,2 mm, eroare de potrivire 2,5 mm.
+- Comparare pe cele 7 puncte învățate (4 colțuri + 3 pe nivelul 1) cu o foaie rigidă 45 x 43 mm: RMS 16,6 mm (vechi) față de
+  16,5 mm (carte). La nivelul 1, modelul se abate de punctele învățate pe direcția liniilor cu 4,9 / 18,8 / 17,5 mm
+  (r0c1 / r1c1 / r2c1; vechi 4,5 / 17,2 / 15,4).
+- Concluzie: lungimile segmentelor nu explică nici pasul caroiajului (35 față de 44 mm), nici eroarea de stivuire. Rămân de
+  verificat: punctele învățate cu înclinări diferite ale ghearei (−39…−62°), zero-ul servo-urilor 2-4 și poziția reală
+  a foii. Măsurătoarea cea mai utilă: distanța cu rigla de la axa bazei la centrul celulei r1c1.
+- Postura `[90, 120, 0, 0, 90, 90]` -> `[-0,006; 0,116; 0,091] m` din document ține de DOFBOT-Pro (alt URDF): nu e folosită.
