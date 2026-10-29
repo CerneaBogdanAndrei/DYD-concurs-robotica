@@ -56,6 +56,7 @@ UV = np.float32([[0, 0], [3, 0], [3, 3], [0, 3]])
 REF = HERE / "ref/observe_small"  # imaginea foii goale din poza de start (mutare_foaie.py --ref-nou)
 POSE_PX = 6.0  # colțurile mai departe de atât față de referință (~1,6 mm): poza de start nu s-a repetat (de obicei 1-3 px)
 GRIP_EMPTY = 2  # gheara citită la cel mult atât sub comandă = goală
+CLIPPED = "blob_clipped_by_image"  # fața de sus a cubului iese din cadrul camerei
 MAX_FIX_MM = 8.0  # corecția nu trece de atât: peste, e mai probabil o măsurătoare greșită
 K_WRIST = 0.23  # cât din rotirea comandată a cubului se vede pe foaie, la început (proba_rotire.py pe r1c1)
 K_RANGE = (0.15, 1.0)  # k învățat rămâne între acestea
@@ -157,16 +158,20 @@ class Cube:
 
     def seen(self, obs):
         cells = [c for c in obs["cells"] if c["occupancy"] == "occupied" and c["uv_top"]]
-        return cells[0] if len(cells) == 1 else None
+        if len(cells) != 1:
+            return None
+        # tăiată de marginea de sus a imaginii (rândul r0) se completează în base_uv; tăiată altundeva, nu
+        return None if CLIPPED in cells[0]["reasons"] and cells[0]["uv_top"][1] >= 0.8 else cells[0]
 
     def base_uv(self, cell):
-        """Centrul bazei cubului (uv), corectat de paralaxă; fața de sus tăiată de marginea de sus a imaginii
-        (rândul r0: se vede mai mică pe linii) se completează spre partea tăiată."""
+        """Centrul bazei cubului (uv), corectat de paralaxă. Pe rândul r0 fața de sus iese peste marginea de sus a
+        imaginii: viziunea o dă tăiată, întreagă pe coloane și mai scurtă pe linii; centrul se completează spre
+        partea tăiată cu jumătate din diferența laturilor."""
         u, v = cell["uv_top"]
         H = self.loc.camera_height_mm
-        side_h = cell["metrics"].get("side_h_mm")
-        if side_h is not None and side_h < 0.85 * self.mm and v < 0.8:
-            v -= (self.mm - side_h) / 2.0 * H / (H - self.mm) / ROW
+        sides = [cell["metrics"].get(k) for k in ("side_w_mm", "side_h_mm")]
+        if CLIPPED in cell["reasons"] and v < 0.8 and None not in sides:
+            v -= (max(sides) - min(sides)) / 2.0 * H / (H - self.mm) / ROW
         return correct_parallax((u, v), self.mm, H, tuple(self.loc.nadir_uv))
 
     def footprint_mm(self, uv, yaw_deg):
