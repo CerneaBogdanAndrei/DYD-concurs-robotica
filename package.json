@@ -1,0 +1,23 @@
+{
+  "name": "dyd-concurs-robotica",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Control braț Yahboom Dofbot (Raspberry Pi 4) pentru concursul de roboți industriali",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test \"dist/test/**/*.test.js\"",
+    "compara:armlib": "npm run build && node dist/scripts/compara-armlib.js"
+  },
+  "optionalDependencies": {
+    "i2c-bus": "^5.2.3"
+  },
+  "devDependencies": {
+    "@types/i2c-bus": "^5.1.2",
+    "@types/node": "^22.10.0",
+    "typescript": "~5.9.3"
+  }
+}
