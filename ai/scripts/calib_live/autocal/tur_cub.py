@@ -18,7 +18,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from proba_pick_serviciu import LOCATION, ROOT, SERVICE, load_app_config, correct_parallax, observation, post  # noqa: E402
 
-COL, ROW = 33.0, 32.2  # mm pe celulă (rigla 3,3 x 3,3 cm; din imagine 33 x 32,2)
+COL, ROW = 33.0, 33.0  # mm pe celulă: pătrate de 3,3 x 3,3 cm (rigla)
 BASE_MM = (57.3, 309.5)  # axa bazei în mm pe foaie (axa_bazei.py 2026-10-29, cu celulele de mai sus)
 
 

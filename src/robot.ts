@@ -182,7 +182,16 @@ export class Robot {
     const n = Math.max(1, steps);
     for (let i = 1; i <= n; i++) {
       const z = z0 + ((z1 - z0) * i) / n;
-      await this.goto(x, y, z, yaw, Robot.near(pitch), tMs / n, i < n ? 0 : C.SETTLE_MS);
+      // un pas intermediar poate cădea într-un gol dintre înclinările candidate (din 5 în 5 grd): se mută cu câțiva mm
+      const tries = i < n ? [0, 2, -2, 4, -4] : [0];
+      for (const [k, dz] of tries.entries()) {
+        try {
+          await this.goto(x, y, z + dz, yaw, Robot.near(pitch), tMs / n, i < n ? 0 : C.SETTLE_MS);
+          break;
+        } catch (e) {
+          if (!(e instanceof Unreachable) || k === tries.length - 1) throw e;
+        }
+      }
     }
   }
 

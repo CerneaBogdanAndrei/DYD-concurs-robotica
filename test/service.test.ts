@@ -35,6 +35,24 @@ describe("ArmService (ArmInterface peste Robot)", () => {
     }
   });
 
+  it("ridicarea pe loc trece peste golurile dintre înclinări (pick aproape de bază, apoi turn de 5)", async () => {
+    const { arm } = openSimArm();
+    const robot = await Robot.create(arm, { sim: true, log: () => {} });
+    const near: Calib = {
+      poses: {},
+      sites: {
+        medium: {
+          kind: "grid",
+          points: { r0c0: [228, -43, 15], r0c2: [228, 43, 15], r2c0: [142, -43, 15], r2c2: [142, 43, 15] },
+        },
+      },
+    };
+    const svc = new ArmService(robot, () => near, true);
+    assert.deepEqual(await svc.pick({ location: "medium", cell: [2, 1] }), { ok: true });
+    // ridicarea la x = 142 trece prin z ≈ 103, unde nicio înclinare din 5 în 5 grd nu ajunge
+    assert.deepEqual(await svc.place({ location: "medium", cell: [1, 1], level: 4 }), { ok: true });
+  });
+
   it("pick pe celulă coboară la centrul ei, la z-ul caroiajului", async () => {
     const { svc, robot } = await service();
     const t = svc.resolve("source", [1, 1], 0, 0);

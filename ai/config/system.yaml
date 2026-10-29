@@ -28,9 +28,9 @@ gripper:
 # iar observe_pose cu pozele învățate (npm run calib -- poza NUME).
 locations:
   small:                      # foaia de sub braț (calib.json: observe_small, small). Măsurat 2026-10-29 ~21:55 cu rigla: celulă
-    rows: 3                   # 3,3 x 3,3 cm; din imagine 33 x 32,2 mm. Măsurătoarea de dinainte (4,5 x 4,3 cm, margini 1 / 4,9 /
+    rows: 3                   # 3,3 x 3,3 cm, pătrate perfecte (rigla). Măsurătoarea de dinainte (4,5 x 4,3 cm, margini 1 / 4,9 /
     cols: 3                   # 2,8 / 15,9 cm) era a altei foi: cu ea, cubul de 29 mm ieșea „40 mm” și camera la „221 mm”.
-    cell_mm: 33.0             # MĂSURAT cu rigla 3,3 x 3,3 cm (codul presupune celule pătrate; liniile au ~32,2 mm din imagine)
+    cell_mm: 33.0             # MĂSURAT cu rigla: pătrate de 3,3 x 3,3 cm (32,2 pe linii, din imagine, era eroarea modelului camerei)
     line_width_mm: 0.8        # MĂSURAT din poză: 5-6 px la 312 px/celulă ≈ 0,7-0,8 mm (±0,2 mm); NERECALCULAT cu celula de 33 mm
     orientation_quarter_turns: 0
     observe_pose: observe_small

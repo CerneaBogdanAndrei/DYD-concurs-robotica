@@ -12,7 +12,8 @@ import time
 
 import numpy as np
 
-from traseu_cub import COL, HERE, LOCATION, ROW, Cube, cell_box, grab, lines_uv, load_app_config, look, post, ROOT, \
+import traseu_cub
+from traseu_cub import COL, GRAB, HERE, LOCATION, ROW, Cube, Sheet, grab, load_app_config, look, post, ROOT, \
     start_pose, status, wrap45
 
 OUT = HERE / "proba_rotire.json"
@@ -21,25 +22,26 @@ OUT = HERE / "proba_rotire.json"
 def main():
     r, c = int(sys.argv[1]), int(sys.argv[2])
     yaws = [float(v) for v in sys.argv[3:]] or [0.0, 10.0, -10.0, 0.0]
+    traseu_cub.SHEET = sheet = Sheet()
     loc = load_app_config(ROOT / "ai/config").system.location(LOCATION)
     cube = Cube(loc, status()["cube_mm"])
     start_pose()
     found = look(cube)
     if found is None:
         sys.exit("Camera nu vede bine cubul: opresc.")
-    seen, uv, obs, img = found
-    left, right, top, bottom = cell_box(lines_uv(obs, img), r, c)
+    seen, uv, _, _ = found
+    left, right, top, bottom = sheet.box(r, c)
     target = ((left + right) / 2.0, (top + bottom) / 2.0)
     log = []
     for yaw_cmd in yaws:
         before = seen["yaw_deg"]
-        ok, diag, _, _, _ = grab(cube, seen, uv, [])
-        print(f"pick (cubul rotit {before:+.1f} grd): {diag} -> {'prins' if ok else 'CUBUL E ÎNCĂ PE FOAIE'}", flush=True)
-        if not ok:
+        state, diag, _ = grab(cube, seen, uv, [])
+        print(f"pick (cubul rotit {before:+.1f} grd): {diag} -> {GRAB[state]}", flush=True)
+        if state != "prins":
             post("beep", {"n": 4})
-            if look(cube) is not None:
+            if state == "gol":
                 post("open_gripper")
-            sys.exit("Pick ratat: opresc.")
+            sys.exit("Pick ratat: opresc" + (" (gheara deschisă)." if state == "gol" else " cu gheara închisă."))
         res = post("place", {"location": LOCATION, "uv": list(target), "yaw_deg": yaw_cmd})
         if res.get("result") is not True:
             sys.exit(f"place refuzat: {res} (cubul e încă în gheară)")

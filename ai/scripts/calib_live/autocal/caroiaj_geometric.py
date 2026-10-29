@@ -3,7 +3,7 @@
 - axa bazei în mm pe foaie: `axa_bazei.json` (din `axa_bazei.py`, rotiri ale bazei văzute de cameră);
 - direcția brațului (x al robotului, servo 1 = 90): de la axa bazei spre punctul de sub cameră în poza de observare
   (PnP pe cele 16 intersecții, f și K1 ca în `mutare_foaie.py`), plus `--rotire` grade (+ = spre stânga);
-- centrele celulelor: liniile foii (33 x 32,2 mm), duse în sistemul robotului (x înainte, y la stânga);
+- centrele celulelor: liniile foii (pătrate de 33 mm), duse în sistemul robotului (x înainte, y la stânga);
 - înălțimea de prindere: planul colțurilor învățate înainte (z-ul modelului depinde de poziția brațului, nu de foaie),
   evaluat în noile poziții.
 `--lateral E` (mm, + = gheara ajunge la dreapta) rotește direcția astfel încât abaterea laterală E măsurată pe r1c1
@@ -51,6 +51,7 @@ def camera_now():
     R, _ = cv2.Rodrigues(rv)
     cam = (-R.T @ tv).ravel()
     json.dump({"at": time.strftime("%Y-%m-%d %H:%M:%S"), "nadir_mm": cam[:2].tolist(), "height_mm": abs(cam[2]),
+               "nadir_uv": [cam[0] / COL, cam[1] / ROW],
                "pose": json.load(open(ROOT / "calib.json"))["poses"]["observe_small"]}, open(CAMERA, "w"), indent=1)
     return cam[:2], abs(cam[2])
 
@@ -59,7 +60,7 @@ def camera_saved():
     cam = json.load(open(CAMERA))
     if cam["pose"] != json.load(open(ROOT / "calib.json"))["poses"]["observe_small"]:
         sys.exit("camera_observare.json e din altă poză de observare: rulați fără --camera-salvata, cu foaia goală.")
-    return np.array(cam["nadir_mm"]), cam["height_mm"]
+    return np.array(cam["nadir_uv"]) * (COL, ROW), cam["height_mm"]
 
 
 def old_z_plane(points):
@@ -85,9 +86,7 @@ def main():
     ap.add_argument("--aplica", action="store_true")
     a = ap.parse_args()
     axis = json.load(open(HERE / "axa_bazei.json"))
-    if (axis["col"], axis["row"]) != (COL, ROW):
-        sys.exit("axa_bazei.json e măsurat cu altă dimensiune a celulei: rulați din nou axa_bazei.py")
-    B = np.array(axis["base_mm"])
+    B = np.array(axis["base_uv"]) * (COL, ROW)  # în celule: nu depinde de mărimea celulei folosită la măsurare
     nadir, H = camera_saved() if a.camera_salvata else camera_now()
     f = (nadir - B) / np.linalg.norm(nadir - B)
     rot = math.radians(a.rotire)

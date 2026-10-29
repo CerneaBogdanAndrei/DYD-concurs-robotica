@@ -2,12 +2,15 @@
 
 Pentru fiecare mutare:
 1. poza de start (home -> observe_small) și două analize la rând care văd cubul în același loc (±1,5 mm), cu
-   rotirea lui; liniile caroiajului măsurate sub-pixel (`grid_measure`) dau poziția reală a fiecărei celule;
+   rotirea lui. Liniile celulelor sunt cele salvate din imaginea de referință (foaia goală, aceeași poză:
+   `ref/observe_small.jpg`, măsurate sub-pixel cu `grid_measure`): foaia nu se mișcă, iar cubul (pe foaie sau în
+   gheară, jos în imagine peste r2) ar acoperi liniile. Pozițiile din fiecare analiză se duc în uv-ul referinței;
 2. pick prin serviciu (gheara din config.ts, la mijlocul cubului, coborâre lină), corectat cu abaterea laterală
    a ghearei învățată la mutările de dinainte; serviciul dă unghiurile citite jos, înainte și după închidere;
-3. înapoi în poza de start, cu cubul în gheară: foaia trebuie să fie goală. Altfel cubul n-a fost prins: 4 bipuri,
-   gheara se deschide, cubul e măsurat din nou și pick-ul se reia o dată;
-4. place pe centrul celulei-țintă măsurat din liniile ei (corectat lateral și ca rotire), înapoi în poza de start și
+3. prins = gheara citită strânge ceva (140 comandat: goală 139, cu cubul ~133-136) și, din poza de start, nicio
+   celulă ocupată (cubul din gheară se poate vedea jos, peste r2, ca „nesigur”). Gheara goală: 4 bipuri, gheara se
+   deschide, cubul e măsurat din nou și pick-ul se reia o dată;
+4. place pe centrul celulei-țintă din liniile salvate (corectat pe ambele axe și ca rotire), înapoi în poza de start și
    verificarea: cât rămâne, în mm, între cub și fiecare linie a celulei, și rotirea cubului;
 5. dacă cubul atinge mijlocul unei linii sau e rotit peste GOOD_YAW_DEG: îl ia din nou de unde a ajuns și îl pune
    corectat cu abaterile măsurate pe celula aceea (de cel mult MAX_FIXES ori).
@@ -36,9 +39,12 @@ from proba_pick_serviciu import LOCATION, ROOT, SERVICE, correct_parallax, load_
 from brain.perception.grid_measure import measure_lines  # noqa: E402
 
 PREVIEW = "http://127.0.0.1:8080"
-COL, ROW = 33.0, 32.2  # mm pe celulă (rigla 3,3 x 3,3 cm; din imagine 33 x 32,2)
-BASE_MM = tuple(json.load(open(HERE / "axa_bazei.json"))["base_mm"])  # axa bazei în mm pe foaie (axa_bazei.py)
+COL, ROW = 33.0, 33.0  # mm pe celulă: pătrate de 3,3 x 3,3 cm (rigla; 32,2 din imagine era eroarea modelului camerei)
+BASE_MM = tuple(np.array(json.load(open(HERE / "axa_bazei.json"))["base_uv"]) * (COL, ROW))  # axa bazei pe foaie (axa_bazei.py)
 UV = np.float32([[0, 0], [3, 0], [3, 3], [0, 3]])
+REF = HERE / "ref/observe_small"  # imaginea foii goale din poza de start (mutare_foaie.py --ref-nou)
+POSE_PX = 6.0  # colțurile mai departe de atât față de referință (~1,6 mm): poza de start nu s-a repetat (de obicei 1-3 px)
+GRIP_EMPTY = 2  # gheara citită la cel mult atât sub comandă = goală
 MAX_FIX_MM = 8.0  # corecția nu trece de atât: peste, e mai probabil o măsurătoare greșită
 K_WRIST = 0.7  # cât din rotirea comandată a cubului se vede pe foaie (r0c0: -8 grd comandat -> -5,8 grd)
 MAX_FIX_YAW = 8.0  # la fel, corecția de rotire (grd)
@@ -75,20 +81,40 @@ def analyses(n=2):
     return out
 
 
-def lines_uv(obs, img):
-    """Intersecțiile măsurate (4 x 4, uv) în cadrul analizei; None unde o linie nu se vede."""
-    pts = measure_lines(img, obs["geometry"]["corners_px"])["points"]
-    H = cv2.getPerspectiveTransform(np.float32(obs["geometry"]["corners_px"]), UV)
-    return [[None if p is None else cv2.perspectiveTransform(np.float64([[p]]), H).reshape(2) for p in row] for row in pts]
+class Sheet:
+    """Caroiajul salvat din imaginea de referință: colțurile (pixeli) și cele 16 intersecții (uv)."""
+
+    def __init__(self):
+        obs = json.load(open(REF.with_suffix(".json")))
+        self.corners = np.float32(obs["geometry"]["corners_px"])
+        self.H = cv2.getPerspectiveTransform(self.corners, UV)
+        pts = measure_lines(cv2.imread(str(REF.with_suffix(".jpg"))), obs["geometry"]["corners_px"])["points"]
+        if pts is None or any(p is None for row in pts for p in row):
+            sys.exit("În imaginea de referință nu se văd toate liniile: refaceți-o cu foaia goală (mutare_foaie.py --ref-nou).")
+        self.lines = [[cv2.perspectiveTransform(np.float64([[p]]), self.H).reshape(2) for p in row] for row in pts]
+        self.warned = False
+
+    def to_ref(self, obs, uv):
+        """uv din analiza `obs` -> uv-ul referinței, prin pixeli. Dacă poza de start nu s-a repetat (colțurile s-au
+        mutat), rămâne uv-ul analizei: e tot pe foaie, doar cu colțurile de acum."""
+        c = np.float32(obs["geometry"]["corners_px"])
+        moved = float(np.abs(c - self.corners).max())
+        if moved > POSE_PX:
+            if not self.warned:
+                say(f"  ATENȚIE: colțurile caroiajului sunt la {moved:.1f} px de referință (poza sau foaia s-a mișcat)")
+                self.warned = True
+            return tuple(uv)
+        px = cv2.perspectiveTransform(np.float64([[uv]]), np.linalg.inv(cv2.getPerspectiveTransform(c, UV)))
+        return tuple(cv2.perspectiveTransform(px, self.H).reshape(2))
+
+    def box(self, r, c):
+        """Liniile celulei în uv: stânga, dreapta, sus (departe), jos (spre robot)."""
+        g = self.lines
+        return ((g[r][c][0] + g[r + 1][c][0]) / 2, (g[r][c + 1][0] + g[r + 1][c + 1][0]) / 2,
+                (g[r][c][1] + g[r][c + 1][1]) / 2, (g[r + 1][c][1] + g[r + 1][c + 1][1]) / 2)
 
 
-def cell_box(grid, r, c):
-    """Liniile celulei în uv: stânga, dreapta, sus (departe), jos (spre robot); nominal unde lipsesc."""
-    def avg(pts, axis, nominal):
-        vals = [p[axis] for p in pts if p is not None]
-        return float(np.mean(vals)) if vals else float(nominal)
-    return (avg([grid[r][c], grid[r + 1][c]], 0, c), avg([grid[r][c + 1], grid[r + 1][c + 1]], 0, c + 1),
-            avg([grid[r][c], grid[r][c + 1]], 1, r), avg([grid[r + 1][c], grid[r + 1][c + 1]], 1, r + 1))
+SHEET = None  # Sheet(), încărcat în main
 
 
 class Cube:
@@ -159,11 +185,6 @@ def wrap45(a):
     return (a + 45.0) % 90.0 - 45.0
 
 
-def on_sheet(obs):
-    """Ceva pe foaie: o celulă ocupată sau nesigură (un cub căzut pe linii nu e „ocupat” în nicio celulă)."""
-    return any(c["occupancy"] != "empty" for c in obs["cells"])
-
-
 def look(cube, tries=3):
     """Cubul din poza de start: două analize la rând care îl văd în același loc (±1,5 mm) și îi dau rotirea."""
     for _ in range(tries):
@@ -171,6 +192,8 @@ def look(cube, tries=3):
         a, b = cube.seen(o1), cube.seen(o2)
         if a is None or b is None or b["yaw_deg"] is None:
             continue
+        a = dict(a, uv_top=SHEET.to_ref(o1, a["uv_top"]))
+        b = dict(b, uv_top=SHEET.to_ref(o2, b["uv_top"]))
         ua, ub = cube.base_uv(a), cube.base_uv(b)
         if math.hypot((ua[0] - ub[0]) * COL, (ua[1] - ub[1]) * ROW) <= 1.5:
             return b, ub, o2, img
@@ -194,19 +217,34 @@ def grasp_text(st):
 
 
 def grab(cube, seen, uv, learned):
-    """Pick pe cubul văzut în uv, apoi poza de start. Întoarce (prins, diagnoza, corecția, analiza, imaginea)."""
+    """Pick pe cubul văzut în uv, apoi poza de start. Întoarce (starea, diagnoza, corecția): „prins”, „gol” (gheara
+    s-a închis pe nimic: cubul e pe foaie) sau „neclar” (gheara strânge ceva, dar pe foaie e o celulă ocupată)."""
     e = predict(learned, uv)
     res = post("pick", {"location": LOCATION, "uv": corrected(uv, e), "yaw_deg": seen["yaw_deg"]})
     if res.get("result") is not True:
         sys.exit(f"pick refuzat: {res}")
-    diag = grasp_text(status())
+    st = status()
+    closed = ((st.get("last_grasp") or {}).get("closed") or [None] * 6)[5]
+    holding = closed is not None and closed < st["grip"] - GRIP_EMPTY
+    diag = grasp_text(st)
     post("beep", {"n": 2})
     start_pose()
-    (obs, img), = analyses(1)
-    return not on_sheet(obs), diag, e, obs, img
+    (obs, _), = analyses(1)
+    left = [f"r{c['row']}c{c['col']}" for c in obs["cells"] if c["occupancy"] == "occupied"]
+    if not holding:
+        return "gol", diag, e
+    return ("neclar" if left else "prins"), diag + (f"; pe foaie: {', '.join(left)} ocupat" if left else ""), e
+
+
+GRAB = {"prins": "prins", "gol": "GHEARA GOALĂ, cubul a rămas pe foaie", "neclar": "NECLAR"}
 
 
 def main():
+    global SHEET
+    SHEET = Sheet()
+    sizes = [f"r{r}c{c} {(b[1] - b[0]) * COL:.1f}x{(b[3] - b[2]) * ROW:.1f}" for r in range(3) for c in range(3)
+             for b in [SHEET.box(r, c)]]
+    say("Liniile salvate din imaginea de referință (mm): " + ", ".join(sizes))
     route = [(int(s[0]), int(s[1])) for s in sys.argv[1:]]
     loc = load_app_config(ROOT / "ai/config").system.location(LOCATION)
     cube = Cube(loc, status()["cube_mm"])
@@ -229,24 +267,23 @@ def main():
         say(f"r{src_cell[0]}c{src_cell[1]} -> r{r}c{c}: cubul la uv ({src[0]:.3f}; {src[1]:.3f}), rotit {seen['yaw_deg']:+.1f} grd")
         # 2-3. pick, verificat din poza de start; o reîncercare
         for attempt in (1, 2):
-            ok, diag, e, o3, img3 = grab(cube, seen, src, learned)
-            say(f"  pick {attempt} (corecția laterală {-e:+.1f} mm): {diag} -> {'prins' if ok else 'CUBUL E ÎNCĂ PE FOAIE'}")
-            if ok:
+            state, diag, e = grab(cube, seen, src, learned)
+            say(f"  pick {attempt} (corecția laterală {-e:+.1f} mm): {diag} -> {GRAB[state]}")
+            if state == "prins":
                 break
             post("beep", {"n": 4})
+            if state == "neclar":
+                sys.exit("Gheara strânge ceva, dar pe foaie se vede un cub: opresc cu gheara închisă.")
+            post("open_gripper")  # gheara s-a închis pe nimic
             found = look(cube)
-            if found is None:
-                sys.exit("Pe foaie e ceva, dar nu cubul clar: opresc cu gheara închisă (poate ține cubul).")
-            post("open_gripper")  # cubul e pe foaie, deci gheara e goală
-            if attempt == 2:
-                sys.exit("Pick ratat de două ori: opresc (gheara deschisă).")
+            if attempt == 2 or found is None:
+                sys.exit("Pick ratat: opresc (gheara deschisă)." + ("" if found else " Camera nu vede clar cubul."))
             seen, src, _, _ = found
             say(f"  cubul e acum la uv ({src[0]:.3f}; {src[1]:.3f}), rotit {seen['yaw_deg']:+.1f} grd: reîncerc")
-        grid = lines_uv(o3, img3)
-        left, right, top, bottom = cell_box(grid, r, c)
+        left, right, top, bottom = SHEET.box(r, c)
         target = ((left + right) / 2.0, (top + bottom) / 2.0)
         place_uv, yaw_cmd, e_dst = aim(target)
-        say(f"  ținta r{r}c{c}: centrul măsurat uv ({target[0]:.3f}; {target[1]:.3f}), celula "
+        say(f"  ținta r{r}c{c}: centrul din liniile salvate uv ({target[0]:.3f}; {target[1]:.3f}), celula "
             f"{(right - left) * COL:.1f} x {(bottom - top) * ROW:.1f} mm; place corectat cu {-e_dst[0]:+.1f} mm pe "
             f"coloane, {-e_dst[1]:+.1f} mm spre robot, rotire {yaw_cmd:+.1f} grd")
         for fix in range(MAX_FIXES + 1):
@@ -258,8 +295,7 @@ def main():
             found = look(cube)
             if found is None:
                 sys.exit("După place camera nu vede bine cubul (căzut pe linii?): opresc.")
-            got, landed, o4, img4 = found
-            left, right, top, bottom = cell_box(lines_uv(o4, img4), r, c)
+            got, landed, _, _ = found
             fp = cube.footprint_mm(landed, got["yaw_deg"])
             margins = {"stânga": min(x for x, _ in fp) - left * COL, "dreapta": right * COL - max(x for x, _ in fp),
                        "sus": min(y for _, y in fp) - top * ROW, "jos": bottom * ROW - max(y for _, y in fp)}
@@ -284,12 +320,12 @@ def main():
             if good or fix == MAX_FIXES:
                 break
             # 5. corecția: din nou de unde a ajuns, cu abaterile învățate (acum dominate de celula asta)
-            ok, diag, _, _, _ = grab(cube, got, landed, learned)
-            say(f"  corectez: pick din nou ({diag}) -> {'prins' if ok else 'CUBUL E ÎNCĂ PE FOAIE'}")
-            if not ok:
+            state, diag, _ = grab(cube, got, landed, learned)
+            say(f"  corectez: pick din nou ({diag}) -> {GRAB[state]}")
+            if state != "prins":
                 post("beep", {"n": 4})
-                if look(cube) is None:
-                    sys.exit("Pe foaie e ceva, dar nu cubul clar: opresc cu gheara închisă (poate ține cubul).")
+                if state == "neclar":
+                    sys.exit("Gheara strânge ceva, dar pe foaie se vede un cub: opresc cu gheara închisă.")
                 post("open_gripper")
                 sys.exit("Pick-ul pentru corecție a ratat: opresc (gheara deschisă, cubul e pe foaie).")
             place_uv, yaw_cmd, e_dst = aim(target)
