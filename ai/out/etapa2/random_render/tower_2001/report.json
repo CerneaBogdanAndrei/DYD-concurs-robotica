@@ -1,0 +1,84 @@
+{
+  "task": "tower",
+  "goal": "turn yellow pe medium[0,0]",
+  "final_state": "DONE",
+  "goal_reached": true,
+  "budget_exhausted": false,
+  "unmet": [],
+  "warnings": [],
+  "error": null,
+  "elapsed_s": 12.6,
+  "moves_attempted": 1,
+  "move_outcomes": {
+    "ok": 1
+  },
+  "observations": 2,
+  "arm_commands": 4,
+  "first_plan": [
+    " 1. yellow medium[0,1] (niv. 0) -> medium[0,0] (niv. 0): nivelul 0 al turnului: galben [cost substitut]"
+  ],
+  "first_plan_estimated_s": 12.5,
+  "last_plan": [],
+  "moves": [
+    {
+      "index": 1,
+      "move": "yellow medium[0,1] (niv. 0) -> medium[0,0] (niv. 0)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 1.8,
+      "duration_s": 9.0
+    }
+  ],
+  "transitions": [
+    [
+      "OBSERVE",
+      "observed",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "goal_reached",
+      "DONE"
+    ]
+  ],
+  "scenario": "tower_2001",
+  "seed": 2001,
+  "tags": [
+    "tower"
+  ],
+  "note": "turn yellow pe medium[0,0]",
+  "perception": "render",
+  "proximity": false,
+  "dry_run": false,
+  "arm": "mock",
+  "faults": [],
+  "success": true,
+  "truth_problems": [],
+  "expected_success": true,
+  "simulated_time_s": 12.6,
+  "within_time_limit": true,
+  "sim_events": [],
+  "world_final": [
+    "medium: r0c0:yellow, r1c0:yellow",
+    "buffer_1: gol",
+    "buffer_2: gol"
+  ],
+  "wall_time_s": 2.96,
+  "note_timing": "timpi SIMULAȚI (SimDurations), nu măsurători"
+}

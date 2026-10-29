@@ -1,0 +1,28 @@
+Selftest Etapa 0 — seed 42, 200 scene, dificultate nominal (299.84 s)
+  grid_detection_rate          1.0
+  grid_wrong_accepted          0
+  occupancy_accuracy           1.0
+  occupancy_unknown_rate       0.0
+  color_accuracy               1.0
+  top_face_accuracy            1.0
+  yaw_within_5deg              1.0
+  yaw_error_median_deg         0.1515
+  yaw_error_p95_deg            0.4669
+  high_confidence_error_rate   0.0
+  negative_rejection_rate      1.0
+  occluded_corner_safe_rate    1.0
+  ambiguous_safe_rate          1.0
+  processing_ms_median         923.1
+  processing_ms_max            1918.03
+  [OK ] grid_detection
+  [OK ] no_wrong_geometry
+  [OK ] occupancy
+  [OK ] color
+  [OK ] top_face
+  [OK ] yaw
+  [OK ] high_confidence_errors
+  [OK ] negatives_rejected
+  [OK ] occluded_corner_safe
+  [OK ] ambiguous_safe
+  raport: out/etapa2/selftest_medium/report.json
+  Rezultate pe scene sintetice; nu validează camera reală.

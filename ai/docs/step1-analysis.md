@@ -2,6 +2,18 @@
 
 Data: 2026-10-29. Documentul conține analiza inițială, actualizată cu deciziile confirmate de echipă.
 
+## 0'. Actualizări din Etapa 2 (2026-10-29) — au prioritate față de tabelul de mai jos
+
+| Subiect | Acum |
+|---|---|
+| Senzor de proximitate | **Există** (2–400 cm, aproape sigur HC-SR04, neconfirmat). Simulat (`SimulatedProximity`) și folosit opțional la verificarea pick/place (`orchestration/proximity_check.py`); pe robot e dezactivat (`proximity.enabled: false`) până la montare și calibrare. |
+| Mișcarea | Prin serviciul colegilor (TypeScript, HTTP local, `docs/CONTRACT_BRAT.md`), cu extensiile `level` și `uv`. Brain-ul nu are adaptor Arm_Lib. |
+| Caroiaje | Echipa a primit trei foi A4 (câte un caroiaj 3×3: mic, mediu, mare) și a ales foaia `medium` (celulă 4,3 cm, măsurată). La probă se folosește doar ea (`planning.active_locations`); `small`/`large` rămân pentru testele de viziune. |
+| Mutări intermediare | Celulele libere ale caroiajului, apoi punctele tampon opționale (`planning.buffer_points`, calibrate ca zonele). |
+| Exemple | S1: R1 = galben, verde, albastru; R2 = roșu, galben, verde; R3 = albastru, roșu, galben (fața de jos = fața de sus, neverificabilă). S2: de jos în sus roșu, galben, verde, albastru, roșu. Ambele sunt teste fixe în `tests/integration/test_sim_tasks.py`. |
+| Stive | Până la 9 cuburi pe stivă (nivelurile 0..8 ale serviciului); turnul S2 e limitat de `planning.max_tower_level` (4 → 5 cuburi). |
+| Detalii | `docs/stage2.md`. |
+
 ## 0. Decizii confirmate (2026-10-29)
 
 | Subiect | Decizie |

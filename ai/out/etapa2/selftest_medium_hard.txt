@@ -1,0 +1,38 @@
+Selftest Etapa 0 — seed 42, 200 scene, dificultate hard (305.32 s)
+  grid_detection_rate          0.93571
+  grid_wrong_accepted          0
+  occupancy_accuracy           1.0
+  occupancy_unknown_rate       0.0
+  color_accuracy               1.0
+  top_face_accuracy            1.0
+  yaw_within_5deg              0.99572
+  yaw_error_median_deg         0.171
+  yaw_error_p95_deg            0.5912
+  high_confidence_error_rate   0.0
+  negative_rejection_rate      1.0
+  occluded_corner_safe_rate    0.91667
+  ambiguous_safe_rate          1.0
+  processing_ms_median         954.515
+  processing_ms_max            2095.02
+  [EȘEC] grid_detection
+  [OK ] no_wrong_geometry
+  [OK ] occupancy
+  [OK ] color
+  [OK ] top_face
+  [OK ] yaw
+  [OK ] high_confidence_errors
+  [OK ] negatives_rejected
+  [EȘEC] occluded_corner_safe
+  [OK ] ambiguous_safe
+  - seed 4200152 (positive): grilă nedetectată: too_few_valid_frames,low_contrast
+  - seed 4200157 (positive): grilă nedetectată: grid_structure_unverifiable,grid_structure_weak
+  - seed 4200158 (positive): grilă nedetectată: grid_line_unsupported
+  - seed 4200172 (positive): grilă nedetectată: grid_structure_unverifiable,grid_structure_weak
+  - seed 4200183 (positive): grilă nedetectată: grid_touches_border
+  - seed 4200197 (positive): grilă nedetectată: grid_not_found
+  - seed 4200215 (positive): grilă nedetectată: markers_missing:0
+  - seed 4200266 (positive): grilă nedetectată: grid_structure_unverifiable,grid_structure_weak
+  - seed 4200282 (occluded_corner): geometrie greșită acceptată (28.2 px)
+  - seed 4200283 (positive): grilă nedetectată: grid_not_found
+  raport: out/etapa2/selftest_medium_hard/report.json
+  Rezultate pe scene sintetice; nu validează camera reală.

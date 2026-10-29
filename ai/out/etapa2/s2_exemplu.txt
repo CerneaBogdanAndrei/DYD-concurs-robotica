@@ -1,0 +1,10 @@
+Scenariu s2_exemplu (seed 1): exemplul S2 din regulament
+Sarcina tower (turn red-yellow-green-blue-red pe medium[1,1]): stare finală DONE, obiectiv ÎNDEPLINIT
+  #1  red medium[1,0] (niv. 0) -> medium[1,1] (niv. 0)        ok
+  #2  yellow medium[0,0] (niv. 0) -> medium[1,1] (niv. 1)     ok
+  #3  green medium[0,1] (niv. 0) -> medium[1,1] (niv. 2)      ok
+  #4  blue medium[1,2] (niv. 0) -> medium[1,1] (niv. 3)       ok
+  #5  red medium[2,1] (niv. 0) -> medium[1,1] (niv. 4)        ok
+  timp: 55.8 s, mutări: 5, observări: 6, comenzi braț: 16
+  REZULTAT (adevărul simulat): REUȘIT
+  timp simulat 55.8 s (limită 300.0 s); raport: out/etapa2/s2_exemplu/report.json; animație: out/etapa2/s2_exemplu.gif

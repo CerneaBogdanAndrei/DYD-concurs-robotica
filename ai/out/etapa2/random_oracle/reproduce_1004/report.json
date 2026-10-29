@@ -1,0 +1,210 @@
+{
+  "task": "reproduce",
+  "goal": "reproducere pe medium: 9 celule cu cub, 0 goale",
+  "final_state": "DONE",
+  "goal_reached": true,
+  "budget_exhausted": false,
+  "unmet": [],
+  "warnings": [],
+  "error": null,
+  "elapsed_s": 66.6,
+  "moves_attempted": 6,
+  "move_outcomes": {
+    "ok": 6
+  },
+  "observations": 7,
+  "arm_commands": 19,
+  "first_plan": [
+    " 1. red medium[1,0] (niv. 0) -> buffer_1 (niv. 0): golește medium[1,0] (cubul roșu nu e cerut acolo) [cost substitut]",
+    " 2. blue medium[2,2] (niv. 0) -> medium[1,0] (niv. 0): albastru pe medium[1,0] [cost substitut]",
+    " 3. red medium[2,0] (niv. 0) -> medium[2,2] (niv. 0): roșu pe medium[2,2] [cost substitut]",
+    " 4. green medium[1,1] (niv. 0) -> medium[2,0] (niv. 0): verde pe medium[2,0] [cost substitut]",
+    " 5. yellow medium[2,1] (niv. 0) -> medium[1,1] (niv. 0): galben pe medium[1,1] [cost substitut]",
+    " 6. red buffer_1 (niv. 0) -> medium[2,1] (niv. 0): roșu pe medium[2,1] [cost substitut]"
+  ],
+  "first_plan_estimated_s": 75.0,
+  "last_plan": [],
+  "moves": [
+    {
+      "index": 1,
+      "move": "red medium[1,0] (niv. 0) -> buffer_1 (niv. 0)",
+      "purpose": "clear",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 1.8,
+      "duration_s": 9.0
+    },
+    {
+      "index": 2,
+      "move": "blue medium[2,2] (niv. 0) -> medium[1,0] (niv. 0)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 12.6,
+      "duration_s": 9.0
+    },
+    {
+      "index": 3,
+      "move": "red medium[2,0] (niv. 0) -> medium[2,2] (niv. 0)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 23.4,
+      "duration_s": 9.0
+    },
+    {
+      "index": 4,
+      "move": "green medium[1,1] (niv. 0) -> medium[2,0] (niv. 0)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 34.2,
+      "duration_s": 9.0
+    },
+    {
+      "index": 5,
+      "move": "yellow medium[2,1] (niv. 0) -> medium[1,1] (niv. 0)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 45.0,
+      "duration_s": 9.0
+    },
+    {
+      "index": 6,
+      "move": "red buffer_1 (niv. 0) -> medium[2,1] (niv. 0)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 55.8,
+      "duration_s": 9.0
+    }
+  ],
+  "transitions": [
+    [
+      "OBSERVE",
+      "observed",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "goal_reached",
+      "DONE"
+    ]
+  ],
+  "scenario": "reproduce_1004",
+  "seed": 1004,
+  "tags": [
+    "reproduce",
+    "complete"
+  ],
+  "note": "reproducere pe medium: 9 celule cu cub, 0 goale",
+  "perception": "oracle",
+  "proximity": false,
+  "dry_run": false,
+  "arm": "mock",
+  "faults": [],
+  "success": true,
+  "truth_problems": [],
+  "expected_success": true,
+  "simulated_time_s": 66.6,
+  "within_time_limit": true,
+  "sim_events": [],
+  "world_final": [
+    "medium: r0c0:red, r0c1:red, r0c2:blue, r1c0:blue, r1c1:yellow, r1c2:yellow, r2c0:green, r2c1:red, r2c2:red",
+    "buffer_1: gol",
+    "buffer_2: gol"
+  ],
+  "wall_time_s": 0.36,
+  "note_timing": "timpi SIMULAȚI (SimDurations), nu măsurători"
+}

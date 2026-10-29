@@ -1,0 +1,48 @@
+Selftest Etapa 0 — seed 42, 200 scene, dificultate nominal (425.46 s)
+  grid_detection_rate          0.82143
+  grid_wrong_accepted          1
+  occupancy_accuracy           0.97488
+  occupancy_unknown_rate       0.02415
+  color_accuracy               1.0
+  top_face_accuracy            1.0
+  yaw_within_5deg              0.94245
+  yaw_error_median_deg         0.138
+  yaw_error_p95_deg            0.4494
+  high_confidence_error_rate   0.0
+  negative_rejection_rate      1.0
+  occluded_corner_safe_rate    1.0
+  ambiguous_safe_rate          1.0
+  processing_ms_median         1371.485
+  processing_ms_max            3739.9
+  [EȘEC] grid_detection
+  [EȘEC] no_wrong_geometry
+  [EȘEC] occupancy
+  [OK ] color
+  [OK ] top_face
+  [EȘEC] yaw
+  [OK ] high_confidence_errors
+  [OK ] negatives_rejected
+  [OK ] occluded_corner_safe
+  [OK ] ambiguous_safe
+  - seed 4200144 (positive): grilă nedetectată: markers_missing:2
+  - seed 4200145 (positive): grilă nedetectată: aspect_out_of_range,grid_line_unsupported
+  - seed 4200167 (positive): grilă nedetectată: grid_line_unsupported,grid_structure_weak
+  - seed 4200168 (positive): grilă nedetectată: angle_out_of_range,grid_line_unsupported,grid_structure_weak
+  - seed 4200175 (positive): grilă nedetectată: grid_touches_border,perspective_too_strong,grid_line_unsupported,grid_structure_weak
+  - seed 4200190 (positive): grilă nedetectată: perspective_too_strong,grid_line_unsupported,grid_structure_weak
+  - seed 4200195 (positive): grilă nedetectată: grid_line_unsupported
+  - seed 4200206 (positive): grilă nedetectată: grid_lines_not_found
+  - seed 4200215 (positive): grilă nedetectată: markers_missing:2,3
+  - seed 4200218 (positive): grilă nedetectată: markers_missing:2
+  - seed 4200219 (positive): grilă nedetectată: markers_missing:2
+  - seed 4200220 (positive): grilă nedetectată: markers_missing:2
+  - seed 4200230 (positive): grilă nedetectată: markers_missing:2
+  - seed 4200242 (positive): grilă nedetectată: grid_line_unsupported,grid_structure_weak
+  - seed 4200244 (positive): grilă nedetectată: grid_line_unsupported,grid_structure_weak
+  - seed 4200246 (positive): grilă nedetectată: grid_not_found
+  - seed 4200267 (positive): grilă nedetectată: grid_not_found
+  - seed 4200268 (positive): grilă nedetectată: markers_missing:3
+  - seed 4200274 (positive): grilă nedetectată: grid_line_unsupported,grid_structure_weak
+  - seed 4200277 (positive): grilă nedetectată: markers_missing:2,3
+  raport: out/etapa2/selftest_small/report.json
+  Rezultate pe scene sintetice; nu validează camera reală.

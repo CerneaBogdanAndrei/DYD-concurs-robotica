@@ -1,0 +1,11 @@
+Simulare: 15 scenarii aleatoare, seed 2000..2004, percepție render (timpi SIMULAȚI)
+  reproduce reușite 4/5 (80%; dintre cele fezabile 80%), timp simulat median 55.8 s, max 99.0 s, peste limită 0
+    - reproduce_2004 (seed 2004): medium(2,2): green (cerut yellow)
+  sort      reușite 1/5 (20%; dintre cele fezabile 33%), timp simulat median 88.2 s, max 131.4 s, peste limită 0
+    - sort_2000 (seed 2000): yellow rămas pe medium(2, 2)
+    - sort_2001 (seed 2001): blue rămas pe medium(0, 2)
+    - sort_2003 (seed 2003): green rămas pe medium(1, 2); green rămas pe medium(2, 2)
+    - sort_2004 (seed 2004): blue rămas pe medium(1, 2)
+  tower     reușite 4/5 (80%; dintre cele fezabile 100%), timp simulat median 34.2 s, max 55.8 s, peste limită 0
+    - tower_2004 (seed 2004): turnul de pe medium[2,2] e green-yellow-yellow (cerut green-yellow-yellow-blue)
+  rezumat: out/etapa2/random_render/summary.json

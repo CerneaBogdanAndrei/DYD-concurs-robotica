@@ -1,0 +1,195 @@
+{
+  "schema_version": 2,
+  "scene_id": "run-tower",
+  "created_at": "2026-10-29T14:01:04Z",
+  "updated_at": "2026-10-29T14:01:15Z",
+  "locations": {
+    "medium": {
+      "rows": 3,
+      "cols": 3,
+      "observed_at": "2026-10-29T14:01:14Z",
+      "source": "perception",
+      "cells": [
+        {
+          "row": 0,
+          "col": 0,
+          "occupancy": "empty",
+          "occupancy_confidence": 1.0,
+          "stack": [],
+          "reasons": [
+            "parallax_ghost"
+          ]
+        },
+        {
+          "row": 0,
+          "col": 1,
+          "occupancy": "unknown",
+          "occupancy_confidence": 0.0,
+          "stack": [],
+          "reasons": [
+            "parallax_ghost"
+          ]
+        },
+        {
+          "row": 0,
+          "col": 2,
+          "occupancy": "empty",
+          "occupancy_confidence": 1.0,
+          "stack": [],
+          "reasons": [
+            "parallax_ghost"
+          ]
+        },
+        {
+          "row": 1,
+          "col": 0,
+          "occupancy": "empty",
+          "occupancy_confidence": 1.0,
+          "stack": [],
+          "reasons": [
+            "parallax_ghost"
+          ]
+        },
+        {
+          "row": 1,
+          "col": 1,
+          "occupancy": "occupied",
+          "occupancy_confidence": 0.7,
+          "stack": [
+            {
+              "color": "red",
+              "color_confidence": 1.0,
+              "yaw_deg": -1.73,
+              "yaw_confidence": 0.9831,
+              "top_face": "full",
+              "cube_id": null,
+              "uv_top": [
+                1.528,
+                1.5129
+              ]
+            },
+            {
+              "color": "yellow",
+              "color_confidence": 1.0,
+              "yaw_deg": 0.92,
+              "yaw_confidence": 1.0,
+              "top_face": "icon",
+              "cube_id": null,
+              "uv_top": [
+                1.5312,
+                1.4928
+              ]
+            },
+            {
+              "color": "green",
+              "color_confidence": 1.0,
+              "yaw_deg": 0.0,
+              "yaw_confidence": 0.3,
+              "top_face": "full",
+              "cube_id": null,
+              "uv_top": [
+                1.495,
+                1.495
+              ]
+            },
+            {
+              "color": "blue",
+              "color_confidence": 1.0,
+              "yaw_deg": 0.0,
+              "yaw_confidence": 0.3,
+              "top_face": "full",
+              "cube_id": null,
+              "uv_top": [
+                1.495,
+                1.495
+              ]
+            },
+            {
+              "color": "red",
+              "color_confidence": 1.0,
+              "yaw_deg": 0.0,
+              "yaw_confidence": 0.3,
+              "top_face": "full",
+              "cube_id": null,
+              "uv_top": [
+                1.495,
+                1.495
+              ]
+            }
+          ],
+          "reasons": [
+            "split_blob"
+          ]
+        },
+        {
+          "row": 1,
+          "col": 2,
+          "occupancy": "empty",
+          "occupancy_confidence": 1.0,
+          "stack": [],
+          "reasons": [
+            "parallax_ghost"
+          ]
+        },
+        {
+          "row": 2,
+          "col": 0,
+          "occupancy": "occupied",
+          "occupancy_confidence": 1.0,
+          "stack": [
+            {
+              "color": "green",
+              "color_confidence": 1.0,
+              "yaw_deg": -5.47,
+              "yaw_confidence": 0.9234,
+              "top_face": "full",
+              "cube_id": null,
+              "uv_top": [
+                0.2579,
+                2.6106
+              ]
+            }
+          ],
+          "reasons": [
+            "parallax_ghost"
+          ]
+        },
+        {
+          "row": 2,
+          "col": 1,
+          "occupancy": "empty",
+          "occupancy_confidence": 1.0,
+          "stack": [],
+          "reasons": [
+            "parallax_ghost"
+          ]
+        },
+        {
+          "row": 2,
+          "col": 2,
+          "occupancy": "occupied",
+          "occupancy_confidence": 0.7,
+          "stack": [
+            {
+              "color": "blue",
+              "color_confidence": 1.0,
+              "yaw_deg": 0.53,
+              "yaw_confidence": 1.0,
+              "top_face": "full",
+              "cube_id": null,
+              "uv_top": [
+                2.6694,
+                2.7603
+              ]
+            }
+          ],
+          "reasons": [
+            "parallax_ghost"
+          ]
+        }
+      ]
+    }
+  },
+  "zones": {},
+  "metadata": {}
+}

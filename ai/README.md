@@ -4,17 +4,18 @@ Percepție, memorie persistentă, planificare simbolică și orchestrare. Mișca
 colegilor (TypeScript, HTTP local, `../docs/CONTRACT_BRAT.md`). Brain-ul îl apelează prin
 `brain/adapters/arm/team_arm.py`.
 
-## Stare (2026-10-29)
+## Stare (2026-10-29, Etapa 2)
 
 | Parte | Stare |
 |---|---|
 | Etapa 0: viziune offline (grilă după linii, ArUco opțional, celule, culoare, yaw, memorie, selftest) | livrată, testată pe date sintetice ([`docs/stage0.md`](docs/stage0.md)) |
-| Etapa 2: config v2 (3 șabloane, braț, proximitate, timpi, planificare), `MockArm`, `TeamArm`, `SimWorld`, randare cu paralaxă | implementate; teste automate încă lipsă |
-| Etapa 2: planificare S1/S2/S3, orchestrare (FSM), `brain sim run`, `brain run` | **lipsă**: nicio sarcină nu rulează încă cap-coadă |
-| Previzualizarea camerei în browser (`brain camera preview`, MJPEG + analiză adnotată) | implementată, testată cu cadre sintetice |
+| Etapa 2: planificare S1/S2/S3 (Greedy), orchestrare (FSM), `brain sim run`, `brain run`, `report timings`, `calib corners` | implementate, testate în simulare ([`docs/stage2.md`](docs/stage2.md)) |
+| Integrare cu serviciul colegilor | testată cu serviciul lor pornit în simulare (`--sim`), pe Pi |
+| Previzualizarea camerei în browser (`brain camera preview`, MJPEG + analiză adnotată) | implementată, testată cu cadre sintetice; integrată și în `brain run --preview` |
 | Etapa 3: scripturi pentru Pi, plan de test live | **lipsă**: mai jos sunt pașii manuali provizorii |
 
-Nimic din brain nu a fost testat pe braț sau pe camera reală.
+Foaia aleasă de echipă: `medium`, caroiaj 3×3 cu celule de 4,3 cm (măsurat). Nimic din brain nu a fost testat
+pe braț sau pe camera reală.
 
 ## Pe laptop (Windows)
 
@@ -32,6 +33,20 @@ $env:PYTHONUTF8=1                                   # diacritice corecte în con
 ```
 
 Pe Linux / Pi, înlocuiți `.venv\Scripts\python` cu `.venv/bin/python`.
+
+### Sarcinile în simulare (Etapa 2)
+
+```bash
+python -m brain sim run --task tower --example --gif out/s2.gif                    # exemplul S2, viziunea reală pe camera sintetică
+python -m brain sim run --task tower --order red,yellow,green --target medium:r0c0
+python -m brain sim run --task reproduce --example --buffers 2                       # exemplul S1 (cere un punct tampon)
+python -m brain sim run --task sort --seed 5 --proximity --faults pick:grasp_fail@2
+python -m brain sim run --task all --random 20 --perception oracle --buffers 2       # 60 de scenarii, rata de succes
+python -m brain report timings --journal out/sim_run/timings.jsonl
+```
+
+`--perception oracle` sare peste randare și viziune (rapid); implicit e `render` (camera sintetică + viziunea reală).
+Timpii din simulare sunt SIMULAȚI. Detalii, rezultate și limitări: [`docs/stage2.md`](docs/stage2.md).
 
 ### Serviciul de mișcare în simulare + `TeamArm`
 
@@ -158,9 +173,10 @@ npm run server              # braț REAL; lăsați-l pornit
 Calibrați cu numele folosite de brain (`config/system.yaml`):
 
 ```bash
-npm run calib -- poza observe_medium          # la fel pentru small și large
+npm run calib -- poza observe_medium          # foaia aleasă: doar medium
 npm run calib -- celule medium                # r0c0, r0c2, r2c0, r2c2
 npm run calib -- zona zone_red                # S3: zone_red, zone_yellow, zone_green, zone_blue
+npm run calib -- zona buffer_1                # opțional: puncte tampon (S1), trecute și în planning.buffer_points
 npm run calib -- test medium 1 1
 ```
 
@@ -179,10 +195,26 @@ Prima mișcare se face cu mâna pe întrerupătorul de alimentare, după calibra
 ```
 
 Cu `camera preview` pornit într-o altă consolă, vedeți în browser ce vede camera din această poză.
-Rularea sarcinilor (`brain run`) nu există încă.
+
+### 7. Sarcinile pe braț (`brain run`)
+
+Fără `--execute`, brain-ul doar observă (camera din poziția curentă) și afișează planul; brațul nu se mișcă:
+
+```bash
+.venv/bin/python -m brain run --task tower --order red,yellow,green,blue,red --target medium:r1c1 --preview
+.venv/bin/python -m brain run --task memorize --target-out out/s1_target.yaml        # S1, faza 1: memorează aranjamentul
+.venv/bin/python -m brain run --task reproduce --target-file out/s1_target.yaml
+.venv/bin/python -m brain run --task sort
+```
+
+Cu `--execute` brațul se mișcă, după o confirmare în consolă (scrieți `da`). Serviciul trebuie să raporteze
+`sim: false`, iar `medium`, `observe_medium` (și zonele, la S3) trebuie să fie calibrate. Ctrl+C oprește după
+comanda curentă, fără `home`. Rezultatele (raport, durate, memorie, log) ajung în `out/run-<data>/`.
+Duratele măsurate devin valori pentru `config/system.yaml` cu `python -m brain report timings --journal out/run-*/timings.jsonl`.
 
 ## Documente
 
 - [`docs/step1-analysis.md`](docs/step1-analysis.md): analiza tehnică și arhitectura
 - [`docs/stage0.md`](docs/stage0.md): Etapa 0 (viziune offline)
+- [`docs/stage2.md`](docs/stage2.md): Etapa 2 (planificare, orchestrare, simularea sarcinilor)
 - [`docs/questions-for-kinematics-team.md`](docs/questions-for-kinematics-team.md): constatări și întrebări pentru serviciul de mișcare

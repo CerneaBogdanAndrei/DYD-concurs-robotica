@@ -1,0 +1,16 @@
+Scenariu s1_exemplu (seed 1): exemplul S1 din regulament
+Sarcina reproduce (reproducere pe medium: 9 celule cu cub, 0 goale): stare finală DONE, obiectiv ÎNDEPLINIT
+  ATENȚIE: fața de jos cerută pentru 9 celule: neverificabil (camera vede doar fața de sus): medium[0,0] galben, medium[0,1] verde, medium[0,2] albastru, medium[1,0] roșu, medium[1,1] galben, medium[1,2] verde, medium[2,0] albastru, medium[2,1] roșu, medium[2,2] galben
+  #1  red medium[0,0] (niv. 0) -> buffer_1 (niv. 0)           ok
+  #2  yellow medium[0,1] (niv. 0) -> medium[0,0] (niv. 0)     ok
+  #3  green medium[0,2] (niv. 0) -> medium[0,1] (niv. 0)      ok
+  #4  blue medium[1,1] (niv. 0) -> medium[0,2] (niv. 0)       ok
+  #5  yellow medium[1,0] (niv. 0) -> medium[1,1] (niv. 0)     ok
+  #6  red medium[2,2] (niv. 0) -> medium[1,0] (niv. 0)        ok
+  #7  yellow medium[2,0] (niv. 0) -> medium[2,2] (niv. 0)     ok
+  #8  blue medium[2,1] (niv. 0) -> medium[2,0] (niv. 0)       ok
+  #9  red buffer_1 (niv. 0) -> medium[2,1] (niv. 0)           ok
+  ATENȚIE: fața de jos cerută pentru 9 celule: neverificabil (camera vede doar fața de sus): medium[0,0] galben, medium[0,1] verde, medium[0,2] albastru, medium[1,0] roșu, medium[1,1] galben, medium[1,2] verde, medium[2,0] albastru, medium[2,1] roșu, medium[2,2] galben
+  timp: 99.0 s, mutări: 9, observări: 10, comenzi braț: 28
+  REZULTAT (adevărul simulat): REUȘIT
+  timp simulat 99.0 s (limită 300.0 s); raport: out/etapa2/s1_exemplu/report.json; animație: out/etapa2/s1_exemplu.gif

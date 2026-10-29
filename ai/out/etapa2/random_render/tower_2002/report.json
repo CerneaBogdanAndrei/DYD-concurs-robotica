@@ -1,0 +1,197 @@
+{
+  "task": "tower",
+  "goal": "turn blue-red-blue-blue-green pe medium[0,0]",
+  "final_state": "DONE",
+  "goal_reached": false,
+  "budget_exhausted": false,
+  "unmet": [
+    "prea puține cuburi: turnul cere 5, pe masă sunt 0 de încredere",
+    "lipsește 1 cub roșu",
+    "lipsește 1 cub verde",
+    "lipsesc 3 cuburi albastre",
+    "nivelul 0 (albastru) nu poate fi construit: niciun cub accesibil"
+  ],
+  "warnings": [],
+  "error": null,
+  "elapsed_s": 55.8,
+  "moves_attempted": 5,
+  "move_outcomes": {
+    "ok": 4,
+    "mismatch": 1
+  },
+  "observations": 6,
+  "arm_commands": 16,
+  "first_plan": [
+    " 1. blue medium[1,0] (niv. 0) -> medium[0,0] (niv. 0): nivelul 0 al turnului: albastru [cost substitut]",
+    " 2. red medium[2,1] (niv. 0) -> medium[0,0] (niv. 1): nivelul 1 al turnului: roșu [cost substitut]",
+    " 3. blue medium[0,2] (niv. 0) -> medium[0,0] (niv. 2): nivelul 2 al turnului: albastru [cost substitut]",
+    " 4. blue medium[2,2] (niv. 0) -> medium[0,0] (niv. 3): nivelul 3 al turnului: albastru [cost substitut]",
+    " 5. green medium[2,0] (niv. 0) -> medium[0,0] (niv. 4): nivelul 4 al turnului: verde [cost substitut]"
+  ],
+  "first_plan_estimated_s": 62.5,
+  "last_plan": [
+    "NEÎNDEPLINIT: prea puține cuburi: turnul cere 5, pe masă sunt 0 de încredere",
+    "NEÎNDEPLINIT: lipsește 1 cub roșu",
+    "NEÎNDEPLINIT: lipsește 1 cub verde",
+    "NEÎNDEPLINIT: lipsesc 3 cuburi albastre",
+    "NEÎNDEPLINIT: nivelul 0 (albastru) nu poate fi construit: niciun cub accesibil"
+  ],
+  "moves": [
+    {
+      "index": 1,
+      "move": "blue medium[1,0] (niv. 0) -> medium[0,0] (niv. 0)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 1.8,
+      "duration_s": 9.0
+    },
+    {
+      "index": 2,
+      "move": "red medium[2,1] (niv. 0) -> medium[0,0] (niv. 1)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 12.6,
+      "duration_s": 9.0
+    },
+    {
+      "index": 3,
+      "move": "blue medium[0,2] (niv. 0) -> medium[0,0] (niv. 2)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 23.4,
+      "duration_s": 9.0
+    },
+    {
+      "index": 4,
+      "move": "blue medium[2,2] (niv. 0) -> medium[0,0] (niv. 3)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 34.2,
+      "duration_s": 9.0
+    },
+    {
+      "index": 5,
+      "move": "green medium[2,0] (niv. 0) -> medium[0,0] (niv. 4)",
+      "purpose": "goal",
+      "outcome": "mismatch",
+      "detail": "reobservare: pe medium[0,0] nu e cubul green la nivelul 4",
+      "started_s": 45.0,
+      "duration_s": 9.0
+    }
+  ],
+  "transitions": [
+    [
+      "OBSERVE",
+      "observed",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "nothing_doable",
+      "DONE"
+    ]
+  ],
+  "scenario": "tower_2002",
+  "seed": 2002,
+  "tags": [
+    "tower"
+  ],
+  "note": "turn blue-red-blue-blue-green pe medium[0,0]",
+  "perception": "render",
+  "proximity": false,
+  "dry_run": false,
+  "arm": "mock",
+  "faults": [],
+  "success": true,
+  "truth_problems": [],
+  "expected_success": true,
+  "simulated_time_s": 55.8,
+  "within_time_limit": true,
+  "sim_events": [],
+  "world_final": [
+    "medium: r0c0:blue-red-blue-blue-green",
+    "buffer_1: gol",
+    "buffer_2: gol"
+  ],
+  "wall_time_s": 9.18,
+  "note_timing": "timpi SIMULAȚI (SimDurations), nu măsurători"
+}

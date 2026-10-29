@@ -1,0 +1,41 @@
+{
+  "reproduce": {
+    "scenarios": 5,
+    "success": 4,
+    "success_rate": 0.8,
+    "success_rate_feasible": 0.8,
+    "simulated_time_median_s": 55.8,
+    "simulated_time_max_s": 99.0,
+    "over_time_limit": 0,
+    "failures": [
+      "reproduce_2004 (seed 2004): medium(2,2): green (cerut yellow)"
+    ]
+  },
+  "sort": {
+    "scenarios": 5,
+    "success": 1,
+    "success_rate": 0.2,
+    "success_rate_feasible": 0.333,
+    "simulated_time_median_s": 88.2,
+    "simulated_time_max_s": 131.4,
+    "over_time_limit": 0,
+    "failures": [
+      "sort_2000 (seed 2000): yellow rămas pe medium(2, 2)",
+      "sort_2001 (seed 2001): blue rămas pe medium(0, 2)",
+      "sort_2003 (seed 2003): green rămas pe medium(1, 2); green rămas pe medium(2, 2)",
+      "sort_2004 (seed 2004): blue rămas pe medium(1, 2)"
+    ]
+  },
+  "tower": {
+    "scenarios": 5,
+    "success": 4,
+    "success_rate": 0.8,
+    "success_rate_feasible": 1.0,
+    "simulated_time_median_s": 34.2,
+    "simulated_time_max_s": 55.8,
+    "over_time_limit": 0,
+    "failures": [
+      "tower_2004 (seed 2004): turnul de pe medium[2,2] e green-yellow-yellow (cerut green-yellow-yellow-blue)"
+    ]
+  }
+}

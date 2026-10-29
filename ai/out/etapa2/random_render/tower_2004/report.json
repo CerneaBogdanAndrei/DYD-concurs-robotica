@@ -1,0 +1,145 @@
+{
+  "task": "tower",
+  "goal": "turn green-yellow-yellow-blue pe medium[2,2]",
+  "final_state": "DONE",
+  "goal_reached": false,
+  "budget_exhausted": false,
+  "unmet": [
+    "lipsește 1 cub albastru",
+    "nivelul 3 (albastru) nu poate fi construit: niciun cub accesibil"
+  ],
+  "warnings": [],
+  "error": null,
+  "elapsed_s": 34.2,
+  "moves_attempted": 3,
+  "move_outcomes": {
+    "ok": 3
+  },
+  "observations": 4,
+  "arm_commands": 10,
+  "first_plan": [
+    " 1. green medium[0,1] (niv. 0) -> medium[2,2] (niv. 0): nivelul 0 al turnului: verde [cost substitut]",
+    " 2. yellow medium[2,1] (niv. 0) -> medium[2,2] (niv. 1): nivelul 1 al turnului: galben [cost substitut]",
+    " 3. yellow medium[0,2] (niv. 0) -> medium[2,2] (niv. 2): nivelul 2 al turnului: galben [cost substitut]",
+    "NEÎNDEPLINIT: lipsește 1 cub albastru",
+    "NEÎNDEPLINIT: nivelul 3 (albastru) nu poate fi construit: niciun cub accesibil"
+  ],
+  "first_plan_estimated_s": 37.5,
+  "last_plan": [
+    "NEÎNDEPLINIT: lipsește 1 cub albastru",
+    "NEÎNDEPLINIT: nivelul 3 (albastru) nu poate fi construit: niciun cub accesibil"
+  ],
+  "moves": [
+    {
+      "index": 1,
+      "move": "green medium[0,1] (niv. 0) -> medium[2,2] (niv. 0)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 1.8,
+      "duration_s": 9.0
+    },
+    {
+      "index": 2,
+      "move": "yellow medium[2,1] (niv. 0) -> medium[2,2] (niv. 1)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 12.6,
+      "duration_s": 9.0
+    },
+    {
+      "index": 3,
+      "move": "yellow medium[0,2] (niv. 0) -> medium[2,2] (niv. 2)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 23.4,
+      "duration_s": 9.0
+    }
+  ],
+  "transitions": [
+    [
+      "OBSERVE",
+      "observed",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "nothing_doable",
+      "DONE"
+    ]
+  ],
+  "scenario": "tower_2004",
+  "seed": 2004,
+  "tags": [
+    "tower",
+    "missing_cube"
+  ],
+  "note": "turn green-yellow-yellow-blue pe medium[2,2]",
+  "perception": "render",
+  "proximity": false,
+  "dry_run": false,
+  "arm": "mock",
+  "faults": [],
+  "success": false,
+  "truth_problems": [
+    "turnul de pe medium[2,2] e green-yellow-yellow (cerut green-yellow-yellow-blue)"
+  ],
+  "expected_success": null,
+  "simulated_time_s": 34.2,
+  "within_time_limit": true,
+  "sim_events": [],
+  "world_final": [
+    "medium: r0c0:green, r1c0:red, r2c2:green-yellow-yellow",
+    "buffer_1: gol",
+    "buffer_2: gol"
+  ],
+  "wall_time_s": 5.84,
+  "note_timing": "timpi SIMULAȚI (SimDurations), nu măsurători"
+}

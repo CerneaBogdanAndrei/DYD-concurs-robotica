@@ -1,0 +1,20 @@
+Scenariu sort_7 (seed 7): 9 cuburi de sortat
+Sarcina sort (sortare pe zonele hărții): stare finală DONE, obiectiv ÎNDEPLINIT
+  #1  red medium[0,1] (niv. 1) -> zone_red (niv. 0)           ok (senzorul confirmă cubul pe țintă)
+  #2  red medium[0,0] (niv. 0) -> zone_red (niv. 1)           pick_missed (senzorul: cubul nu e în gheară (cube_below))
+  #3  red medium[0,0] (niv. 0) -> zone_red (niv. 1)           ok (senzorul confirmă cubul pe țintă)
+  #4  green medium[0,1] (niv. 0) -> zone_green (niv. 0)       ok (senzorul confirmă cubul pe țintă)
+  #5  red medium[0,2] (niv. 0) -> zone_red (niv. 2)           dropped (senzorul: nimic sub gheară după eliberare (cubul a căzut))
+  #6  red medium[0,1] (niv. 0) -> zone_red (niv. 2)           ok (senzorul confirmă cubul pe țintă)
+  #7  green medium[1,2] (niv. 0) -> zone_green (niv. 1)       ok (senzorul confirmă cubul pe țintă)
+  #8  yellow medium[2,0] (niv. 1) -> zone_yellow (niv. 0)     ok (senzorul confirmă cubul pe țintă)
+  #9  blue medium[1,0] (niv. 0) -> zone_blue (niv. 0)         ok (senzorul confirmă cubul pe țintă)
+  #10 yellow medium[1,1] (niv. 0) -> zone_yellow (niv. 1)     ok (senzorul confirmă cubul pe țintă)
+  #11 green medium[2,0] (niv. 0) -> zone_green (niv. 2)       ok (senzorul confirmă cubul pe țintă)
+  #12 blue medium[2,1] (niv. 0) -> zone_blue (niv. 1)         ok (senzorul confirmă cubul pe țintă)
+  #13 green medium[2,2] (niv. 0) -> zone_green (niv. 3)       ok (senzorul confirmă cubul pe țintă)
+  ATENȚIE: 2 cub(uri) de culoare necunoscută rămân pe loc (unknown_color_policy=leave)
+  ATENȚIE: 1 cub(uri) de culoare necunoscută rămân pe loc (unknown_color_policy=leave)
+  timp: 145.5 s, mutări: 13, observări: 14, comenzi braț: 39
+  REZULTAT (adevărul simulat): REUȘIT
+  timp simulat 145.51 s (limită 300.0 s); raport: out/etapa2/s3_senzor/report.json; animație: out/etapa2/s3_senzor.gif

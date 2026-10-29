@@ -1,0 +1,398 @@
+{
+  "task": "sort",
+  "goal": "sortare pe zonele hărții",
+  "final_state": "DONE",
+  "goal_reached": true,
+  "budget_exhausted": false,
+  "unmet": [],
+  "warnings": [
+    "2 cub(uri) de culoare necunoscută rămân pe loc (unknown_color_policy=leave)",
+    "1 cub(uri) de culoare necunoscută rămân pe loc (unknown_color_policy=leave)"
+  ],
+  "error": null,
+  "elapsed_s": 145.51,
+  "moves_attempted": 13,
+  "move_outcomes": {
+    "ok": 11,
+    "pick_missed": 1,
+    "dropped": 1
+  },
+  "observations": 14,
+  "arm_commands": 39,
+  "first_plan": [
+    " 1. red medium[0,1] (niv. 1) -> zone_red (niv. 0): roșu pe zone_red [cost substitut]",
+    " 2. red medium[0,0] (niv. 0) -> zone_red (niv. 1): roșu pe zone_red [cost substitut]",
+    " 3. red medium[0,2] (niv. 0) -> zone_red (niv. 2): roșu pe zone_red [cost substitut]",
+    " 4. green medium[1,2] (niv. 0) -> zone_green (niv. 0): verde pe zone_green [cost substitut]",
+    " 5. yellow medium[2,0] (niv. 1) -> zone_yellow (niv. 0): galben pe zone_yellow [cost substitut]",
+    " 6. blue medium[1,0] (niv. 0) -> zone_blue (niv. 0): albastru pe zone_blue [cost substitut]",
+    " 7. yellow medium[1,1] (niv. 0) -> zone_yellow (niv. 1): galben pe zone_yellow [cost substitut]",
+    " 8. blue medium[2,1] (niv. 0) -> zone_blue (niv. 1): albastru pe zone_blue [cost substitut]",
+    " 9. green medium[2,2] (niv. 0) -> zone_green (niv. 1): verde pe zone_green [cost substitut]",
+    "ATENȚIE: 2 cub(uri) de culoare necunoscută rămân pe loc (unknown_color_policy=leave)"
+  ],
+  "first_plan_estimated_s": 112.5,
+  "last_plan": [],
+  "moves": [
+    {
+      "index": 1,
+      "move": "red medium[0,1] (niv. 1) -> zone_red (niv. 0)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "senzorul confirmă cubul pe țintă",
+      "started_s": 1.8,
+      "duration_s": 9.62
+    },
+    {
+      "index": 2,
+      "move": "red medium[0,0] (niv. 0) -> zone_red (niv. 1)",
+      "purpose": "sort",
+      "outcome": "pick_missed",
+      "detail": "senzorul: cubul nu e în gheară (cube_below)",
+      "started_s": 13.22,
+      "duration_s": 4.81
+    },
+    {
+      "index": 3,
+      "move": "red medium[0,0] (niv. 0) -> zone_red (niv. 1)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "senzorul confirmă cubul pe țintă",
+      "started_s": 19.84,
+      "duration_s": 9.62
+    },
+    {
+      "index": 4,
+      "move": "green medium[0,1] (niv. 0) -> zone_green (niv. 0)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "senzorul confirmă cubul pe țintă",
+      "started_s": 31.26,
+      "duration_s": 9.62
+    },
+    {
+      "index": 5,
+      "move": "red medium[0,2] (niv. 0) -> zone_red (niv. 2)",
+      "purpose": "sort",
+      "outcome": "dropped",
+      "detail": "senzorul: nimic sub gheară după eliberare (cubul a căzut)",
+      "started_s": 42.69,
+      "duration_s": 9.62
+    },
+    {
+      "index": 6,
+      "move": "red medium[0,1] (niv. 0) -> zone_red (niv. 2)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "senzorul confirmă cubul pe țintă",
+      "started_s": 54.11,
+      "duration_s": 9.62
+    },
+    {
+      "index": 7,
+      "move": "green medium[1,2] (niv. 0) -> zone_green (niv. 1)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "senzorul confirmă cubul pe țintă",
+      "started_s": 65.54,
+      "duration_s": 9.62
+    },
+    {
+      "index": 8,
+      "move": "yellow medium[2,0] (niv. 1) -> zone_yellow (niv. 0)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "senzorul confirmă cubul pe țintă",
+      "started_s": 76.96,
+      "duration_s": 9.62
+    },
+    {
+      "index": 9,
+      "move": "blue medium[1,0] (niv. 0) -> zone_blue (niv. 0)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "senzorul confirmă cubul pe țintă",
+      "started_s": 88.39,
+      "duration_s": 9.62
+    },
+    {
+      "index": 10,
+      "move": "yellow medium[1,1] (niv. 0) -> zone_yellow (niv. 1)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "senzorul confirmă cubul pe țintă",
+      "started_s": 99.81,
+      "duration_s": 9.62
+    },
+    {
+      "index": 11,
+      "move": "green medium[2,0] (niv. 0) -> zone_green (niv. 2)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "senzorul confirmă cubul pe țintă",
+      "started_s": 111.24,
+      "duration_s": 9.62
+    },
+    {
+      "index": 12,
+      "move": "blue medium[2,1] (niv. 0) -> zone_blue (niv. 1)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "senzorul confirmă cubul pe țintă",
+      "started_s": 122.66,
+      "duration_s": 9.62
+    },
+    {
+      "index": 13,
+      "move": "green medium[2,2] (niv. 0) -> zone_green (niv. 3)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "senzorul confirmă cubul pe țintă",
+      "started_s": 134.09,
+      "duration_s": 9.62
+    }
+  ],
+  "transitions": [
+    [
+      "OBSERVE",
+      "observed",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "pick_failed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "goal_reached",
+      "DONE"
+    ]
+  ],
+  "scenario": "sort_7",
+  "seed": 7,
+  "tags": [
+    "sort",
+    "stacked"
+  ],
+  "note": "9 cuburi de sortat",
+  "perception": "render",
+  "proximity": true,
+  "dry_run": false,
+  "arm": "mock",
+  "faults": [
+    "pick:grasp_fail@2",
+    "place:drop@4"
+  ],
+  "success": true,
+  "truth_problems": [],
+  "expected_success": true,
+  "simulated_time_s": 145.51,
+  "within_time_limit": true,
+  "sim_events": [
+    "pick medium(0, 0): ratat (eroare 0.2 mm, unghi 0.4°, eșec injectat)",
+    "cubul 11 a căzut în timpul transportului",
+    "cubul 11 (red) a aterizat în medium(0, 1)",
+    "place zone_red: gheara era goală"
+  ],
+  "world_final": [
+    "medium: gol",
+    "zone_red: red-red-red",
+    "zone_yellow: yellow-yellow",
+    "zone_green: green-green-green-green",
+    "zone_blue: blue-blue"
+  ],
+  "wall_time_s": 20.2,
+  "note_timing": "timpi SIMULAȚI (SimDurations), nu măsurători",
+  "gif": "out/etapa2/s3_senzor.gif"
+}

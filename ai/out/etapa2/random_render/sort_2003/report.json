@@ -1,0 +1,304 @@
+{
+  "task": "sort",
+  "goal": "sortare pe zonele hărții",
+  "final_state": "DONE",
+  "goal_reached": false,
+  "budget_exhausted": false,
+  "unmet": [
+    "nivel peste limită: zona zone_green e plină (sort_map.max_level=3) (2 cub(uri))"
+  ],
+  "warnings": [
+    "1 cub(uri) de culoare necunoscută rămân pe loc (unknown_color_policy=leave)"
+  ],
+  "error": null,
+  "elapsed_s": 102.6,
+  "moves_attempted": 9,
+  "move_outcomes": {
+    "ok": 8,
+    "pick_missed": 1
+  },
+  "observations": 12,
+  "arm_commands": 30,
+  "first_plan": [
+    " 1. green medium[1,1] (niv. 1) -> zone_green (niv. 0): verde pe zone_green [cost substitut]",
+    " 2. yellow medium[0,0] (niv. 0) -> zone_yellow (niv. 0): galben pe zone_yellow [cost substitut]",
+    " 3. green medium[0,2] (niv. 0) -> zone_green (niv. 1): verde pe zone_green [cost substitut]",
+    " 4. yellow medium[1,0] (niv. 0) -> zone_yellow (niv. 1): galben pe zone_yellow [cost substitut]",
+    " 5. green medium[1,2] (niv. 0) -> zone_green (niv. 2): verde pe zone_green [cost substitut]",
+    " 6. red medium[2,0] (niv. 0) -> zone_red (niv. 0): roșu pe zone_red [cost substitut]",
+    " 7. blue medium[2,1] (niv. 0) -> zone_blue (niv. 0): albastru pe zone_blue [cost substitut]",
+    " 8. green medium[2,2] (niv. 0) -> zone_green (niv. 3): verde pe zone_green [cost substitut]",
+    "ATENȚIE: 1 cub(uri) de culoare necunoscută rămân pe loc (unknown_color_policy=leave)"
+  ],
+  "first_plan_estimated_s": 100.0,
+  "last_plan": [
+    "NEÎNDEPLINIT: nivel peste limită: zona zone_green e plină (sort_map.max_level=3) (2 cub(uri))"
+  ],
+  "moves": [
+    {
+      "index": 1,
+      "move": "green medium[1,1] (niv. 1) -> zone_green (niv. 0)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 3.6,
+      "duration_s": 9.0
+    },
+    {
+      "index": 2,
+      "move": "yellow medium[0,0] (niv. 0) -> zone_yellow (niv. 0)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 16.2,
+      "duration_s": 9.0
+    },
+    {
+      "index": 3,
+      "move": "green medium[0,2] (niv. 0) -> zone_green (niv. 1)",
+      "purpose": "sort",
+      "outcome": "pick_missed",
+      "detail": "reobservare: cubul a rămas pe medium[0,2]",
+      "started_s": 27.0,
+      "duration_s": 9.0
+    },
+    {
+      "index": 4,
+      "move": "green medium[0,0] (niv. 0) -> zone_green (niv. 1)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 37.8,
+      "duration_s": 9.0
+    },
+    {
+      "index": 5,
+      "move": "green medium[0,2] (niv. 0) -> zone_green (niv. 2)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 48.6,
+      "duration_s": 9.0
+    },
+    {
+      "index": 6,
+      "move": "yellow medium[1,0] (niv. 0) -> zone_yellow (niv. 1)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 59.4,
+      "duration_s": 9.0
+    },
+    {
+      "index": 7,
+      "move": "green medium[1,1] (niv. 0) -> zone_green (niv. 3)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 70.2,
+      "duration_s": 9.0
+    },
+    {
+      "index": 8,
+      "move": "red medium[2,0] (niv. 0) -> zone_red (niv. 0)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 81.0,
+      "duration_s": 9.0
+    },
+    {
+      "index": 9,
+      "move": "blue medium[2,1] (niv. 0) -> zone_blue (niv. 0)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 91.8,
+      "duration_s": 9.0
+    }
+  ],
+  "transitions": [
+    [
+      "OBSERVE",
+      "observed",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "nothing_doable",
+      "DONE"
+    ]
+  ],
+  "scenario": "sort_2003",
+  "seed": 2003,
+  "tags": [
+    "sort",
+    "stacked",
+    "zone_overflow"
+  ],
+  "note": "8 cuburi de sortat",
+  "perception": "render",
+  "proximity": false,
+  "dry_run": false,
+  "arm": "mock",
+  "faults": [],
+  "success": false,
+  "truth_problems": [
+    "green rămas pe medium(1, 2)",
+    "green rămas pe medium(2, 2)"
+  ],
+  "expected_success": null,
+  "simulated_time_s": 102.6,
+  "within_time_limit": true,
+  "sim_events": [
+    "pick medium(0, 2) niv. 0: coliziune cu stiva (vârful e la 1)",
+    "cubul 2 (green) a aterizat în medium(0, 0)",
+    "place zone_green: gheara era goală"
+  ],
+  "world_final": [
+    "medium: r1c2:green, r2c2:green",
+    "buffer_1: gol",
+    "buffer_2: gol",
+    "zone_red: red",
+    "zone_yellow: yellow-yellow",
+    "zone_green: green-green-green-green",
+    "zone_blue: blue"
+  ],
+  "wall_time_s": 13.65,
+  "note_timing": "timpi SIMULAȚI (SimDurations), nu măsurători"
+}

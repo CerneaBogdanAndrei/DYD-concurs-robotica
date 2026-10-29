@@ -1,0 +1,192 @@
+{
+  "task": "sort",
+  "goal": "sortare pe zonele hărții",
+  "final_state": "DONE",
+  "goal_reached": true,
+  "budget_exhausted": false,
+  "unmet": [],
+  "warnings": [
+    "1 cub(uri) de culoare necunoscută rămân pe loc (unknown_color_policy=leave)"
+  ],
+  "error": null,
+  "elapsed_s": 55.8,
+  "moves_attempted": 5,
+  "move_outcomes": {
+    "ok": 5
+  },
+  "observations": 6,
+  "arm_commands": 16,
+  "first_plan": [
+    " 1. green medium[1,0] (niv. 1) -> zone_green (niv. 0): verde pe zone_green [cost substitut]",
+    " 2. blue medium[1,1] (niv. 0) -> zone_blue (niv. 1): albastru pe zone_blue [cost substitut]",
+    " 3. green medium[1,2] (niv. 0) -> zone_green (niv. 1): verde pe zone_green [cost substitut]",
+    " 4. green medium[2,1] (niv. 0) -> zone_green (niv. 2): verde pe zone_green [cost substitut]",
+    "ATENȚIE: 1 cub(uri) de culoare necunoscută rămân pe loc (unknown_color_policy=leave)"
+  ],
+  "first_plan_estimated_s": 50.0,
+  "last_plan": [],
+  "moves": [
+    {
+      "index": 1,
+      "move": "green medium[1,0] (niv. 1) -> zone_green (niv. 0)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 1.8,
+      "duration_s": 9.0
+    },
+    {
+      "index": 2,
+      "move": "yellow medium[1,0] (niv. 0) -> zone_yellow (niv. 0)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 12.6,
+      "duration_s": 9.0
+    },
+    {
+      "index": 3,
+      "move": "blue medium[1,1] (niv. 0) -> zone_blue (niv. 1)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 23.4,
+      "duration_s": 9.0
+    },
+    {
+      "index": 4,
+      "move": "green medium[1,2] (niv. 0) -> zone_green (niv. 1)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 34.2,
+      "duration_s": 9.0
+    },
+    {
+      "index": 5,
+      "move": "green medium[2,1] (niv. 0) -> zone_green (niv. 2)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 45.0,
+      "duration_s": 9.0
+    }
+  ],
+  "transitions": [
+    [
+      "OBSERVE",
+      "observed",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "goal_reached",
+      "DONE"
+    ]
+  ],
+  "scenario": "sort_1000",
+  "seed": 1000,
+  "tags": [
+    "already_sorted",
+    "sort",
+    "stacked"
+  ],
+  "note": "4 cuburi de sortat",
+  "perception": "oracle",
+  "proximity": false,
+  "dry_run": false,
+  "arm": "mock",
+  "faults": [],
+  "success": true,
+  "truth_problems": [],
+  "expected_success": true,
+  "simulated_time_s": 55.8,
+  "within_time_limit": true,
+  "sim_events": [],
+  "world_final": [
+    "medium: gol",
+    "buffer_1: gol",
+    "buffer_2: gol",
+    "zone_red: gol",
+    "zone_yellow: yellow",
+    "zone_green: green-green-green",
+    "zone_blue: blue-blue"
+  ],
+  "wall_time_s": 0.22,
+  "note_timing": "timpi SIMULAȚI (SimDurations), nu măsurători"
+}

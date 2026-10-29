@@ -1,0 +1,10 @@
+Simulare: 60 scenarii aleatoare, seed 1000..1019, percepție oracle (timpi SIMULAȚI)
+  reproduce reușite 20/20 (100%; dintre cele fezabile 100%), timp simulat median 88.2 s, max 109.8 s, peste limită 0
+  sort      reușite 15/20 (75%; dintre cele fezabile 100%), timp simulat median 82.8 s, max 120.6 s, peste limită 0
+    - sort_1001 (seed 1001): yellow rămas pe medium(2, 2); yellow rămas pe medium(2, 1)
+    - sort_1002 (seed 1002): yellow rămas pe medium(2, 2); green rămas pe medium(2, 2)
+    - sort_1012 (seed 1012): green rămas pe medium(1, 1)
+    - sort_1017 (seed 1017): blue rămas pe medium(2, 1)
+    - sort_1018 (seed 1018): yellow rămas pe medium(2, 1)
+  tower     reușite 20/20 (100%; dintre cele fezabile 100%), timp simulat median 39.6 s, max 55.8 s, peste limită 0
+  rezumat: out/etapa2/random_oracle/summary.json
