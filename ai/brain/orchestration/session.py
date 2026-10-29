@@ -121,11 +121,16 @@ class ArmSession:
     def go_pose(self, name: str, speed: str = "fast") -> None:
         self.call("go_pose", name, speed)
 
-    def pick(self, location: str, cell: Any, yaw_deg: float, level: int, uv: Any) -> bool:
-        return bool(self.call("pick", location, cell, yaw_deg=yaw_deg, level=level, uv=uv))
+    def pick(self, location: str, cell: Any, yaw_deg: float, level: int, uv: Any, open_mm: Optional[float] = None) -> bool:
+        extra = {} if open_mm is None else {"open_mm": open_mm}
+        return bool(self.call("pick", location, cell, yaw_deg=yaw_deg, level=level, uv=uv, **extra))
 
-    def place(self, location: str, cell: Any, level: int, yaw_deg: float = 0.0) -> bool:
-        return bool(self.call("place", location, cell, level=level, yaw_deg=yaw_deg))
+    def place(self, location: str, cell: Any, level: int, yaw_deg: float = 0.0, release_mm: Optional[float] = None,
+              uv: Any = None) -> bool:
+        extra: Dict[str, Any] = {} if release_mm is None else {"release_mm": release_mm}
+        if uv is not None:
+            extra["uv"] = uv
+        return bool(self.call("place", location, cell, level=level, yaw_deg=yaw_deg, **extra))
 
     def beep(self, count: int = 1) -> None:
         self.call("beep", count)

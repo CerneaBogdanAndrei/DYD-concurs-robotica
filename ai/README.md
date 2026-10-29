@@ -12,10 +12,12 @@ colegilor (TypeScript, HTTP local, `../docs/CONTRACT_BRAT.md`). Brain-ul îl ape
 | Etapa 2: planificare S1/S2/S3 (Greedy), orchestrare (FSM), `brain sim run`, `brain run`, `report timings`, `calib corners` | implementate, testate în simulare ([`docs/stage2.md`](docs/stage2.md)) |
 | Integrare cu serviciul colegilor | testată cu serviciul lor pornit în simulare (`--sim`), pe Pi |
 | Previzualizarea camerei în browser (`brain camera preview`, MJPEG + analiză adnotată) | implementată, testată cu cadre sintetice; integrată și în `brain run --preview` |
+| Pagina de lucru: ținta S1 din poză sau editată, planul, execuția din pagină (oprită implicit, cu cod) | implementată, testată fără hardware (cadre sintetice, `MockArm`) |
+| Gheara printre cuburi: spațiile măsurate de cameră, deschiderea și offset-ul calculate, regulile A/B/C și în serviciu | implementată, testată în simulare; serviciul o aplică doar după `npm run calib -- gheara` |
 | Etapa 3: scripturi pentru Pi, plan de test live | **lipsă**: mai jos sunt pașii manuali provizorii |
 
-Foaia aleasă de echipă: `medium`, caroiaj 3×3 cu celule de 4,3 cm (măsurat). Nimic din brain nu a fost testat
-pe braț sau pe camera reală.
+Foaia folosită la probă: `small` (caroiaj 3×3, celulă 45 × 43 mm, măsurată), cubul de **29 mm** (măsurat).
+Nimic din brain nu a fost testat pe braț sau pe camera reală.
 
 ## Pe laptop (Windows)
 
@@ -126,23 +128,59 @@ Verificare:
 Previzualizare live în browser (Pi-ul nu are ecran):
 
 ```bash
-.venv/bin/python -m brain camera preview --location medium      # Ctrl+C oprește
+.venv/bin/python -m brain camera preview          # șablonul = primul din planning.active_locations; Ctrl+C oprește
 ```
 
-Comanda afișează adresa, de ex. `http://192.168.1.50:8080/`. Deschideți-o în browserul laptopului (aceeași rețea).
-Pagina arată fluxul live, ultima analiză adnotată (grila găsită, culoarea, fața și yaw-ul fiecărei celule,
-refăcută la fiecare secundă) și rezumatul în text. Adrese directe, utile și pentru `curl`:
+Comanda afișează adresa, de ex. `http://192.168.230.100:8080/`. Deschideți-o în browser (laptop sau telefon, în
+aceeași rețea). Pagina nu încarcă nimic de pe internet (merge și cu Pi-ul offline), are temă luminoasă/întunecată
+după sistem și o singură coloană pe telefon. Se actualizează singură la ~1 s. Panourile:
+
+- **Live**: fluxul camerei, cu conturul fiecărui cub din ultima analiză, laturile lui (mm) și cel mai mic spațiu
+  până la un vecin. Culoarea conturului e starea prinderii: verde = pe centru, galben = cu offset, portocaliu =
+  degetele încap pe o singură axă, roșu = pe niciuna. Dedesubt: cadre/s, rezoluția, modul analizei, ora ei.
+- **Ce vede brain-ul**: imaginea adnotată (spațiile până la vecini în mm, verzi dacă încape degetul, roșii dacă
+  nu) și caroiajul: culoarea, încrederea, fața (plină/pictogramă), laturile, „gol” sau „?”. Când grila nu e
+  găsită, motivele apar în clar (de ex. „caroiajul atinge marginea imaginii”).
+- **Stare**: șablonul activ; serviciul de mișcare (simulare/braț real, pozele și locurile calibrate, ce lipsește,
+  dacă gheara e calibrată în mm). Dacă serviciul nu răspunde, pagina scrie asta.
+- **Ținta (S1)**: „Încarcă poza țintă” (fișier sau camera telefonului). Poza e analizată cu aceeași detecție, dar
+  fără obiectivul camerei de pe braț și fără nadir/înălțime (vederea e tratată ca de sus): fotografiați foaia de
+  sus, toată, cu robotul în partea de JOS a pozei (ca din camera brațului). Rezultatul apare ca un caroiaj
+  editabil: un click trece prin gol → roșu → galben → verde → albastru; celulele nesigure sunt marcate; butoanele
+  ⟲/⟳ rotesc caroiajul. Se poate porni și de la un caroiaj gol sau de la „Copiază ce vede camera”.
+  „Confirmă ținta” o salvează în `out/preview/target/target.yaml` (plus poza originală), bună și pentru
+  `brain run --task reproduce --target-file out/preview/target/target.yaml`.
+- **Plan**: „Calculează planul” = de la ultima observație la ținta confirmată, cu cuburile luate de pe șabloanele
+  active și din punctele tampon. Lista de mutări („roșu din r2c0 → r0c1”), deschiderea ghearei la fiecare, durata
+  estimată, ce nu se poate face și de ce. Masa deja ca ținta = „nimic de făcut”. **Planul nu mișcă brațul.**
+- **Execuție**: există doar cu `preview.allow_execute: true` în `config/system.yaml` (implicit `false`: butonul
+  lipsește, iar ruta răspunde 403). Atunci consola Pi-ului afișează la pornire un cod de 8 caractere, introdus o
+  dată în pagină (după 10 coduri greșite execuția se blochează până la repornire). Aceleași verificări ca
+  `brain run --execute`: `status.sim` trebuie să fie `false` (sau `--service-sim` pentru teste), locurile și pozele
+  calibrate, bugetul de timp. O singură execuție odată; „Oprește” = după comanda curentă, fără `home`. Pagina arată
+  mutările cu rezultatul lor și, la final, verificarea vizuală față de țintă. Totul ajunge în `out/preview/runs/`.
+
+Adrese directe, utile și pentru `curl`:
 
 | Adresă | Conținut |
 |---|---|
-| `/stream.mjpg` | flux live MJPEG |
-| `/snapshot.jpg` | ultimul cadru |
-| `/annotated.jpg` | ultima analiză adnotată |
-| `/status.json` | fps, motivele de respingere, câte o linie per celulă |
+| `GET /stream.mjpg` | flux live MJPEG (cu conturul cuburilor; `--no-overlay` îl scoate) |
+| `GET /snapshot.jpg`, `GET /annotated.jpg` | ultimul cadru, ultima analiză adnotată |
+| `GET /status.json` | fps, rezoluția, analiza (per celulă: culoare, încredere, laturi, spații, prindere), `workbench` |
+| `POST /target/image` | poza țintei: corpul = octeții imaginii, `Content-Type: image/*`, maximum 12 MB |
+| `GET /target`, `POST /target` | ținta curentă; ținta editată, JSON `{"location": "small", "rows": [[...] x3]}`, valori `red/yellow/green/blue/empty` |
+| `GET /target/annotated.jpg` | poza țintei, cu analiza |
+| `POST /plan` | planul (JSON) |
+| `GET /execute`, `POST /execute`, `POST /execute/token`, `POST /execute/stop` | execuția (codul în antetul `X-Brain-Token`) |
+
+```bash
+curl -X POST -H "Content-Type: image/jpeg" --data-binary @tinta.jpg http://<ip-pi>:8080/target/image
+curl -X POST http://<ip-pi>:8080/plan
+```
 
 Ultimele imagini se salvează și pe disc în `out/preview/` (`latest_raw.jpg`, `latest_annotated.jpg`,
 `latest_observation.json`). Portul și frecvența se schimbă în `config/system.yaml`, secțiunea `preview`.
-Cu `host: 0.0.0.0`, oricine din aceeași rețea poate vedea camera (doar citire).
+Cu `host: 0.0.0.0`, oricine din aceeași rețea poate vedea camera și poate schimba ținta; doar execuția cere codul.
 
 Ca să le vadă și Claude Code de pe laptop: `curl -o cam.jpg http://<ip-pi>:8080/annotated.jpg`, apoi îi cereți
 să citească `cam.jpg` (sau îi dați direct adresa Pi-ului).
@@ -169,7 +207,7 @@ Cadre pentru analiză offline:
 
 ```bash
 .venv/bin/python -m brain camera capture --count 5 --out out/live
-.venv/bin/python -m brain vision analyze --frames "out/live/frame_*.png" --location medium --out out/live_an
+.venv/bin/python -m brain vision analyze --frames "out/live/frame_*.png" --location small --out out/live_an
 ```
 
 Fără cameră, previzualizarea merge și pe fișiere:
@@ -191,11 +229,15 @@ npm run server              # braț REAL; lăsați-l pornit
 Calibrați cu numele folosite de brain (`config/system.yaml`):
 
 ```bash
-npm run calib -- poza observe_medium          # foaia aleasă: doar medium
-npm run calib -- celule medium                # r0c0, r0c2, r2c0, r2c2
+npm run calib -- gheara 135                   # gheara: doar servo 6 la unghi; măsurați deschiderea INTERIOARĂ (mm)
+npm run calib -- gheara 110                   # repetați pentru 3-4 unghiuri care acoperă 29..45 mm
+npm run calib -- gheara 90
+npm run calib -- gheara                       # tabelul; cu cel puțin 2 puncte, regulile A și C sunt active
+npm run calib -- poza observe_small           # foaia folosită: small
+npm run calib -- celule small                 # r0c0, r0c2, r2c0, r2c2
 npm run calib -- zona zone_red                # S3: zone_red, zone_yellow, zone_green, zone_blue
 npm run calib -- zona buffer_1                # opțional: puncte tampon (S1), trecute și în planning.buffer_points
-npm run calib -- test medium 1 1
+npm run calib -- test small 1 1
 ```
 
 ### 6. Brain → serviciu
@@ -209,7 +251,7 @@ Doar citire de stare, fără mișcare. Trebuie să afișeze `sim: False` și `mo
 Prima mișcare se face cu mâna pe întrerupătorul de alimentare, după calibrare:
 
 ```bash
-.venv/bin/python -c "from brain.adapters.arm.team_arm import TeamArm; a = TeamArm(); a.connect(); a.go_pose('observe_medium', 'slow')"
+.venv/bin/python -c "from brain.adapters.arm.team_arm import TeamArm; a = TeamArm(); a.connect(); a.go_pose('observe_small', 'slow')"
 ```
 
 Cu `camera preview` pornit într-o altă consolă, vedeți în browser ce vede camera din această poză.
@@ -219,14 +261,14 @@ Cu `camera preview` pornit într-o altă consolă, vedeți în browser ce vede c
 Fără `--execute`, brain-ul doar observă (camera din poziția curentă) și afișează planul; brațul nu se mișcă:
 
 ```bash
-.venv/bin/python -m brain run --task tower --order red,yellow,green,blue,red --target medium:r1c1 --preview
+.venv/bin/python -m brain run --task tower --order red,yellow,green,blue,red --target small:r1c1 --preview
 .venv/bin/python -m brain run --task memorize --target-out out/s1_target.yaml        # S1, faza 1: memorează aranjamentul
 .venv/bin/python -m brain run --task reproduce --target-file out/s1_target.yaml
 .venv/bin/python -m brain run --task sort
 ```
 
 Cu `--execute` brațul se mișcă, după o confirmare în consolă (scrieți `da`). Serviciul trebuie să raporteze
-`sim: false`, iar `medium`, `observe_medium` (și zonele, la S3) trebuie să fie calibrate. Ctrl+C oprește după
+`sim: false`, iar `small`, `observe_small` (și zonele, la S3) trebuie să fie calibrate. Ctrl+C oprește după
 comanda curentă, fără `home`. Rezultatele (raport, durate, memorie, log) ajung în `out/run-<data>/`.
 Duratele măsurate devin valori pentru `config/system.yaml` cu `python -m brain report timings --journal out/run-*/timings.jsonl`.
 

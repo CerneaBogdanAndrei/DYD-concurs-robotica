@@ -60,10 +60,12 @@ class Undistorter:
         self.lens = lens
         self.alpha = float(alpha)  # 0 = doar pixeli valizi (fără colțuri negre), 1 = tot câmpul
         self._maps: Dict[Tuple[int, int], Tuple[np.ndarray, np.ndarray]] = {}
+        self._params: Dict[Tuple[int, int], Tuple[np.ndarray, np.ndarray, np.ndarray]] = {}
 
-    def _maps_for(self, width: int, height: int) -> Tuple[np.ndarray, np.ndarray]:
+    def _params_for(self, width: int, height: int) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """(matricea camerei, distorsiunea, matricea cadrului îndreptat) la rezoluția dată."""
         key = (width, height)
-        if key not in self._maps:
+        if key not in self._params:
             matrix = np.array(self.lens.camera_matrix, np.float64)
             calib_w, calib_h = self.lens.image_size
             if (width, height) != (calib_w, calib_h):  # aceeași cameră la altă rezoluție: scalăm matricea
@@ -72,8 +74,24 @@ class Undistorter:
                 matrix[1] *= height / float(calib_h)
             dist = np.array(self.lens.dist_coeffs, np.float64)
             new_matrix, _ = cv2.getOptimalNewCameraMatrix(matrix, dist, (width, height), self.alpha, (width, height))
+            self._params[key] = (matrix, dist, new_matrix)
+        return self._params[key]
+
+    def _maps_for(self, width: int, height: int) -> Tuple[np.ndarray, np.ndarray]:
+        key = (width, height)
+        if key not in self._maps:
+            matrix, dist, new_matrix = self._params_for(width, height)
             self._maps[key] = cv2.initUndistortRectifyMap(matrix, dist, None, new_matrix, (width, height), cv2.CV_16SC2)
         return self._maps[key]
+
+    def distort_points(self, points: np.ndarray, width: int, height: int) -> np.ndarray:
+        """Puncte din cadrul îndreptat → cadrul brut al camerei (desenele peste fluxul live, care nu e îndreptat)."""
+        matrix, dist, new_matrix = self._params_for(width, height)
+        pts = np.asarray(points, np.float64).reshape(-1, 2)
+        normalized = (np.linalg.inv(new_matrix) @ np.column_stack([pts, np.ones(len(pts))]).T).T
+        rays = np.column_stack([normalized[:, 0] / normalized[:, 2], normalized[:, 1] / normalized[:, 2], np.ones(len(pts))])
+        projected, _ = cv2.projectPoints(rays.reshape(-1, 1, 3), np.zeros(3), np.zeros(3), matrix, dist)
+        return projected.reshape(-1, 2)
 
     def __call__(self, frame: np.ndarray) -> np.ndarray:
         height, width = frame.shape[:2]

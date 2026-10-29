@@ -2,7 +2,7 @@
 // Creierul decide CE se mută; aici se decide CUM: unde e celula în spațiul
 // robotului (calibrare), IK, apropiere de sus, coborâre în pași.
 
-import { type Calib, gridOf, requirePose, requireSite } from "./calib.js";
+import { type Calib, gridOf, gripServoForMm, gripTable, requirePose, requireSite } from "./calib.js";
 import * as C from "./config.js";
 import { Unreachable } from "./kinematics.js";
 import { Robot } from "./robot.js";
@@ -22,6 +22,8 @@ export interface PickArgs {
   level?: number;
   /** poziția exactă a cubului în celule (0..3), din viziune. Extensie față de ArmInterface. */
   uv?: [number, number] | null;
+  /** deschiderea interioară de abordare, mm (regula A). Cere gheara calibrată în mm. Extensie. */
+  grip_mm?: number | null;
 }
 
 export interface PlaceArgs {
@@ -29,6 +31,10 @@ export interface PlaceArgs {
   cell?: Cell | null;
   level?: number;
   yaw_deg?: number;
+  /** unde se pune cubul, în celule (0..3): la stivuire, poziția cubului de dedesubt. Extensie față de ArmInterface. */
+  uv?: [number, number] | null;
+  /** deschiderea interioară la eliberare, mm (regula C). Cere gheara calibrată în mm. Extensie. */
+  release_mm?: number | null;
 }
 
 export interface Outcome {
@@ -144,18 +150,36 @@ export class ArmService {
     await this.robot.gripper(C.GRIP_CLOSED);
   }
 
+  /**
+   * Unghiul ghearei pentru o deschidere în mm. Cu gheara calibrată în mm, deschiderea lipsă devine cea
+   * implicită (cubul + 2 x marja); necalibrată, se folosește GRIP_OPEN, iar o deschidere cerută e refuzată.
+   */
+  private gripFor(name: string, mm: unknown, margin: number): number {
+    const calib = this.calib();
+    if (mm === undefined || mm === null) {
+      return gripTable(calib).length > 0 ? gripServoForMm(calib, C.CUBE_MM + 2 * margin) : C.GRIP_OPEN;
+    }
+    const v = checkFinite(name, mm);
+    if (v <= C.CUBE_MM || v > C.GRIP_MAX_OPEN_MM) {
+      throw new ArgumentError(`${name} invalid: ${v} (trebuie între ${C.CUBE_MM} și ${C.GRIP_MAX_OPEN_MM} mm)`);
+    }
+    return gripServoForMm(calib, v);
+  }
+
   async pick(args: PickArgs): Promise<Outcome> {
     const level = checkLevel(args.level ?? 0);
     const yaw = checkFinite("yaw_deg", args.yaw_deg ?? 0);
     const t = this.resolve(args.location, args.cell, level, yaw, args.uv);
-    return this.attempt(() => this.robot.pick(t.x, t.y, t.z, t.yaw));
+    const grip = this.gripFor("grip_mm", args.grip_mm, C.APPROACH_MARGIN_MM);
+    return this.attempt(() => this.robot.pick(t.x, t.y, t.z, t.yaw, grip));
   }
 
   async place(args: PlaceArgs): Promise<Outcome> {
     const level = checkLevel(args.level ?? 0);
     const yaw = checkFinite("yaw_deg", args.yaw_deg ?? 0);
-    const t = this.resolve(args.location, args.cell, level, yaw);
-    return this.attempt(() => this.robot.place(t.x, t.y, t.z, t.yaw));
+    const t = this.resolve(args.location, args.cell, level, yaw, args.uv);
+    const grip = this.gripFor("release_mm", args.release_mm, C.RELEASE_MARGIN_MM);
+    return this.attempt(() => this.robot.place(t.x, t.y, t.z, t.yaw, grip));
   }
 
   /** Inaccesibil -> { ok: false } (creierul poate sări cubul); orice altă eroare se propagă. */
@@ -186,6 +210,7 @@ export class ArmService {
 
   status() {
     const calib = this.calib();
+    const table = gripTable(calib);
     return {
       sim: this.sim,
       poses: ["home", ...Object.keys(calib.poses)],
@@ -193,6 +218,10 @@ export class ArmService {
       joints: this.robot.cur,
       grip: this.robot.grip,
       xyz: this.robot.curXyz,
+      cube_mm: C.CUBE_MM,
+      /** gheara se poate comanda în mm (grip_mm / release_mm); intervalul măsurat */
+      grip_calibrated: table.length > 0,
+      grip_range_mm: table.length > 0 ? [table[0]![1], table[table.length - 1]![1]] : null,
     };
   }
 }

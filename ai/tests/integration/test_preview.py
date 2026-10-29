@@ -49,7 +49,7 @@ def running_preview(app_config, tmp_path):
 def test_preview_serves_page_snapshot_and_analysis(running_preview):
     base, session, save_dir = running_preview
     status, content_type, page = _get(base + "/")
-    assert status == 200 and content_type.startswith("text/html") and b"/stream.mjpg" in page
+    assert status == 200 and content_type.startswith("text/html") and b"stream.mjpg" in page
     assert _wait_for(lambda: (save_dir / "latest_observation.json").is_file()), session.last_error
     _, content_type, body = _get(base + "/snapshot.jpg")
     assert content_type == "image/jpeg"
@@ -59,6 +59,9 @@ def test_preview_serves_page_snapshot_and_analysis(running_preview):
     status_json = json.loads(_get(base + "/status.json")[2].decode("utf-8"))
     assert status_json["location"] == "medium" and status_json["frames"] > 0
     assert status_json["analysis"]["actionable"] is True and len(status_json["analysis"]["cells"]) == 9
+    cell = next(c for c in status_json["analysis"]["cells"].values() if c["state"] == "occupied")
+    assert cell["color"] in ("red", "yellow", "green", "blue") and 20.0 < cell["side_mm"][0] < 40.0
+    assert status_json["info"]["resolution"] == "640x480" and status_json["analysis_age_s"] is not None
     assert (save_dir / "latest_raw.jpg").is_file() and (save_dir / "latest_annotated.jpg").is_file()
     assert session.last_error is None
 

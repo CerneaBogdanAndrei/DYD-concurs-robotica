@@ -21,11 +21,12 @@ Modul simulat răspunde instantaneu și nu modelează scena. Scena simulată ră
 - **`location`** este numele unui loc calibrat. `GET /status` le listează. Sunt de două feluri:
   - *caroiaj* (`source`, `dest`, …): `cell` este obligatoriu;
   - *zonă* (`zone_red`, …): un singur punct, iar `cell` lipsește sau e `null`.
-- **`level`**: 0 înseamnă cub pe masă; nivelul k se află cu k × 30 mm mai sus (`CUBE_MM`).
+- **`level`**: 0 înseamnă cub pe masă; nivelul k se află cu k × 29 mm mai sus (`CUBE_MM`, latura măsurată a cubului).
 - **`yaw_deg`**: rotația cubului, în grade.
   - Pentru un caroiaj, se măsoară în imaginea top-down rectificată, față de axa coloanelor (spre `c` crescător), pozitiv spre `r` crescător. Cubul e simetric la 90°, așa că orice valoare e acceptată; recomandat [-45, 45].
   - Pentru o zonă, se măsoară în sistemul robotului (x spre față).
-- **`uv`** (opțional, doar la `pick`): poziția exactă a centrului cubului în coordonate de celulă continue, `[u, v]` între 0 și 3 (`u` de-a lungul coloanelor; centrul celulei `[r, c]` este `[c + 0.5, r + 0.5]`), corectată de paralaxă. Dacă e dată, înlocuiește centrul celulei. Dați-o când viziunea măsoară cubul deplasat în celulă.
+- **`uv`** (opțional, la `pick` și la `place`): poziția exactă a centrului cubului în coordonate de celulă continue, `[u, v]` între 0 și 3 (`u` de-a lungul coloanelor; centrul celulei `[r, c]` este `[c + 0.5, r + 0.5]`), corectată de paralaxă. Dacă e dată, înlocuiește centrul celulei. Dați-o când viziunea măsoară cubul deplasat în celulă; la `place`, când se stivuiește peste un cub care nu e în centrul celulei.
+- **`grip_mm`** (opțional, doar la `pick`) și **`release_mm`** (opțional, doar la `place`): deschiderea INTERIOARĂ a ghearei, în mm, la abordare și la eliberare. Trebuie să fie mai mare decât cubul (`CUBE_MM`) și cel mult `GRIP_MAX_OPEN_MM` (60). Cer gheara calibrată în mm (`npm run calib -- gheara UNGHI`, vezi mai jos); altfel cererea e refuzată cu `calibrare`. Lipsă: cu gheara calibrată se folosește cubul + 2 × `APPROACH_MARGIN_MM` (abordare), respectiv cubul + 2 × `RELEASE_MARGIN_MM` (eliberare); necalibrată, `GRIP_OPEN`, ca înainte.
 - Toate apelurile sunt **blocante**: răspunsul vine după ce mișcarea s-a terminat. Cererile sunt executate strict una câte una.
 
 ## Metode
@@ -38,15 +39,17 @@ Toate sunt `POST /<nume>`, cu corp JSON (poate lipsi când nu sunt parametri). R
 | `go_pose` | `name`, `speed?` (`"fast"` \| `"slow"`) | `null` | poză învățată (`npm run calib -- poza NUME`); `"home"` există mereu. `slow` = timp dublu |
 | `move_joints` | `angles` (5 sau 6), `time_ms` | `null` | 5 unghiuri = servo 1–5 cu gheara neschimbată; 6 = inclusiv gheara. Grade, convenția Arm_Lib |
 | `open_gripper` / `close_gripper` | – | `null` | `GRIP_OPEN` / `GRIP_CLOSED` din config |
-| `pick` | `location`, `cell?`, `yaw_deg?`, `level?`, `uv?` | `true` / `false` | vezi mai jos |
-| `place` | `location`, `cell?`, `level?`, `yaw_deg?` | `true` / `false` | vezi mai jos |
+| `pick` | `location`, `cell?`, `yaw_deg?`, `level?`, `uv?`, `grip_mm?` | `true` / `false` | vezi mai jos |
+| `place` | `location`, `cell?`, `level?`, `yaw_deg?`, `uv?`, `release_mm?` | `true` / `false` | vezi mai jos |
 | `read_joints` | – | `[6 × număr \| null]` | unghiurile citite; `null` = citire eșuată după 6 încercări. Merge și cu `GET` |
 | `beep` | `n?` (1..10) | `null` | n bipuri de 100 ms |
-| `status` | – | obiect | `sim`, `poses`, `sites` (nume → `"grid"` / `"point"`), `joints`, `grip`, `xyz`. Merge și cu `GET` |
+| `status` | – | obiect | `sim`, `poses`, `sites` (nume → `"grid"` / `"point"`), `joints`, `grip`, `xyz`, `cube_mm`, `grip_calibrated` (gheara se poate comanda în mm), `grip_range_mm` (`[min, max]` măsurat sau `null`). Merge și cu `GET` |
 
-**`pick`**: deschide gheara dacă nu e deschisă. Urcă la cel puțin 70 mm (`TRANSIT_MIN_Z`), merge deasupra cubului și coboară până la 45 mm deasupra lui (`HOVER_DZ`), apoi în 3 pași aproape verticali până la jumătatea cubului. Strânge gheara și urcă înapoi la 45 mm. Starea finală: cubul e în gheară, deasupra locului. Serviciul **nu** verifică dacă a prins cubul; verificarea se face din viziune.
+**`pick`**: dacă brațul e sub 70 mm (`TRANSIT_MIN_Z`), urcă întâi pe verticală. Apoi pre-închide gheara la deschiderea de abordare (`grip_mm`; regula A: gheara nu călătorește larg deschisă printre cuburi). Merge deasupra cubului (cel puțin 70 mm), coboară la 45 mm deasupra lui (`HOVER_DZ`), apoi în 6 pași aproape verticali (`VERTICAL_STEPS`) până la jumătatea cubului. Strânge gheara și urcă înapoi la 45 mm. Starea finală: cubul e în gheară, deasupra locului. Serviciul **nu** verifică dacă a prins cubul; verificarea se face din viziune. Când un vecin e prea aproape, creierul mută centrul ghearei spre spațiul mai mare prin `uv` (regula B).
 
-**`place`**: aceeași apropiere. Coboară cu 3 mm mai sus decât poziția teoretică (`PLACE_GAP`), deschide gheara și urcă la 45 mm.
+**`place`**: aceeași apropiere. Coboară cu 3 mm mai sus decât poziția teoretică (`PLACE_GAP`), deschide gheara doar la `release_mm` (regula C) și urcă strict vertical, în 6 pași, până la cel puțin 70 mm. Abia acolo brațul se poate mișca pe XY sau gheara se poate redeschide.
+
+**Calibrarea ghearei** (o dată, cu șublerul): `npm run calib -- gheara UNGHI` pune doar gheara la unghiul dat și cere deschiderea interioară măsurată, în mm; punctele se țin în `calib.json` (`"gripper": [[unghi, mm], ...]`). Măsurați cel puțin 2 unghiuri care acoperă 29..45 mm (de ex. 135, 110, 90, 60); `npm run calib -- gheara` afișează tabelul.
 
 **`false`** înseamnă punct inaccesibil, cu motivul în `reason`: `{"result": false, "reason": "punct inaccesibil x=… y=… z=…"}`. Accesibilitatea se verifică înainte de orice mișcare, deci de regulă brațul nu s-a clintit. Creierul poate sări cubul, ca în referință.
 

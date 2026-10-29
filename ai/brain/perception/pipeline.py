@@ -7,14 +7,16 @@ iar motivele sunt raportate. Nicio comandă de manipulare nu trebuie generată d
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Dict, List, Optional, Sequence, Tuple
 
 import cv2
 import numpy as np
 
 from brain.configuration.models import ColorsConfig, LocationConfig, SystemConfig
+from brain.domain.cube import Occupancy
 from brain.domain.errors import PerceptionInputError
+from brain.domain.grasp import GAP_METRIC_KEYS, clearances, footprint_from_uv
 from brain.domain.observation import FrameQualitySummary, GeometrySummary, GridObservation
 from brain.domain.scene_state import utc_now_iso
 from brain.perception import geometry as geo
@@ -62,6 +64,42 @@ class VisionResult:
     cell_results: List[CellResult] = field(default_factory=list)
     frame_qualities: List[FrameQuality] = field(default_factory=list)
     white_balance_gains: Optional[Tuple[float, float, float]] = None
+    px_per_mm: Optional[float] = None  # scara imaginii redresate (pe masă)
+    cube_mm: Optional[float] = None
+
+
+def measure_cubes(
+    results: List[CellResult], analyzer: CellAnalyzer, loc: LocationConfig, cube_mm: float, cell_px: int
+) -> List[CellResult]:
+    """Măsurători în mm pentru controlul ghearei, adăugate în `metrics` fiecărui cub văzut:
+    - `side_w_mm`, `side_h_mm`: laturile feței de sus (dreptunghiul minim), aduse la scara mesei (fără paralaxă);
+    - `gap_a_neg_mm` ... `gap_b_pos_mm`: spațiul liber până la cel mai apropiat vecin, pe axele cubului
+      (lipsește dacă pe direcția aceea nu e nimic). Bazele vecinilor: cuburi unice pe masă, latura nominală.
+    """
+    scale = cell_px / loc.cell_mm * analyzer.top_scale  # px redresați per mm, pe fața de sus a unui cub
+    prints = {}
+    for result in results:
+        obs = result.observation
+        if obs.occupancy is Occupancy.OCCUPIED and obs.uv_top is not None:
+            prints[obs.coord] = footprint_from_uv(analyzer.base_uv(obs.uv_top), obs.yaw_deg, loc.cell_mm, cube_mm)
+    measured = []
+    for result in results:
+        obs = result.observation
+        footprint = prints.get(obs.coord)
+        if footprint is None:
+            measured.append(result)
+            continue
+        metrics = dict(obs.metrics)
+        if result.box is not None:
+            edges = np.linalg.norm(np.roll(result.box, -1, axis=0) - result.box, axis=1)
+            metrics["side_w_mm"] = round(float(edges[0]) / scale, 1)
+            metrics["side_h_mm"] = round(float(edges[1]) / scale, 1)
+        gaps = clearances(footprint, [p for coord, p in prints.items() if coord != obs.coord]).to_dict()
+        for side, key in GAP_METRIC_KEYS:
+            if gaps[side] is not None and gaps[side] < loc.cell_mm:  # mai departe de o celulă nu ajunge niciun deget
+                metrics[key] = float(gaps[side])
+        measured.append(CellResult(replace(obs, metrics=metrics), box=result.box, centroid=result.centroid))
+    return measured
 
 
 class VisionPipeline:
@@ -138,7 +176,9 @@ class VisionPipeline:
                 rectified = apply_gains(rectified, gains)
         turns = loc.orientation_quarter_turns
         logical = np.ascontiguousarray(np.rot90(rectified, k=turns)) if turns else rectified
-        cell_results = self._analyzer(loc.name).analyze(logical, loc.rows, loc.cols, margin)
+        analyzer = self._analyzer(loc.name)
+        cell_results = measure_cubes(analyzer.analyze(logical, loc.rows, loc.cols, margin), analyzer, loc,
+                                     self.system.cube.size_mm, cell_px)
 
         observation = GridObservation(
             location=loc.name,
@@ -162,6 +202,8 @@ class VisionPipeline:
             cell_results=cell_results,
             frame_qualities=qualities,
             white_balance_gains=gains,
+            px_per_mm=cell_px / loc.cell_mm,
+            cube_mm=self.system.cube.size_mm,
         )
 
     def _locate_grid(self, image: np.ndarray, loc: LocationConfig) -> _Geometry:

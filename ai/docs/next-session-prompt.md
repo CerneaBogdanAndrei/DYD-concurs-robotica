@@ -1,5 +1,12 @@
 # Prompt pentru sesiunea următoare — proiectul „Brain” (CRI 2026)
 
+> **Actualizare 2026-10-29, a doua sesiune de seară (laptop):** pagina `brain camera preview` e acum masa de lucru
+> (ținta S1 din poză/editată, planul, execuția din pagină oprită implicit și cu cod); cubul are 29 mm (măsurat);
+> gheara: regulile A/B/C în brain (`brain/domain/grasp.py`) și, **cu acordul lui Bogdan, în serviciul colegilor**
+> (`src/robot.ts`, `service.ts`, `calib.ts`, `cli/calib.ts`; constatarea 14 din `questions-for-kinematics-team.md`).
+> Primul lucru pe Pi: `npm run calib -- gheara UNGHI` pentru 3–4 unghiuri (deschiderea interioară măsurată), apoi o
+> prindere între doi vecini, cu mâna pe alimentare. Detalii: `stage2.md`, secțiunea „Actualizare 2026-10-29 seara”.
+
 > **Actualizare 2026-10-29 seara (au prioritate față de restul textului):** senzorul de proximitate (HC-SR04) a fost
 > ELIMINAT din cod și din planuri; brațul e recalibrat pe foaia MICĂ (medium nu încăpea în cameră); previzualizarea
 > merge la 30 fps (MJPG); planificarea penalizează vecinii ocupați (`adjacent_cube_penalty_deg`). Problema principală

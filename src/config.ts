@@ -22,6 +22,15 @@ export const J5_MAX = 180;
 export const GRIP_OPEN = 60; // (!) gheara deschisă (puțin mai largă decât cubul)
 export const GRIP_CLOSED = 135; // (!) gheara strânsă pe cub (nu forțați servo-ul peste 150)
 
+// Gheara în mm (date de echipă 2026-10-29). Deschiderile sunt INTERIOARE (între degete); legătura unghi servo 6
+// -> mm se măsoară cu `npm run calib -- gheara UNGHI` și se ține în calib.json. Fără ea, gheara se deschide
+// la GRIP_OPEN, ca înainte.
+export const GRIP_MAX_OPEN_MM = 60.0; // deschiderea interioară maximă
+export const GRIP_FINGER_MM = 6.0; // grosimea unui deget (lățimea exterioară = deschiderea + 2 x 6 mm)
+// Deschiderea implicită (când clientul nu o cere): cubul + 2 x marja, pe fiecare latură.
+export const APPROACH_MARGIN_MM = 5.0; // (!) abordarea: gheara călătorește și coboară pre-închisă la 29 + 10 mm
+export const RELEASE_MARGIN_MM = 3.0; // (!) eliberarea: doar cât să elibereze cubul (29 + 6 mm)
+
 /**
  * Limite de siguranță per servo (1..6), verificate la fiecare comandă.
  * O comandă în afara lor e refuzată, nu tăiată. Gheara: max 150 (vezi GRIP_CLOSED).
@@ -36,6 +45,8 @@ export const T_MOVE = 900; // ms, mișcări mari
 export const T_FINE = 450; // ms, coborâre / ridicare (împărțită în pași)
 export const T_GRIP = 400; // ms, închidere / deschidere gheară
 export const FINE_STEPS = 3; // în câți pași se face coborârea „pe verticală”
+// Lângă cuburi (coborârea la prindere, ridicarea după eliberare): mai mulți pași = mai aproape de verticală.
+export const VERTICAL_STEPS = 6;
 export const SETTLE_S = 0.6; // s, așteptare după ce brațul ajunge în poza de observare
 
 // Înclinarea ghearei încercată la IK (în ordine): -90 = vertical, 0 = orizontal.
@@ -43,7 +54,7 @@ export const SETTLE_S = 0.6; // s, așteptare după ce brațul ajunge în poza d
 export const PITCH_CANDIDATES: readonly number[] = Array.from({ length: 19 }, (_, i) => -90 + 5 * i);
 
 // ---------------------------------------------------------------- CUBURI
-export const CUBE_MM = 30.0; // (!) latura cubului
+export const CUBE_MM = 29.0; // latura cubului, măsurată de echipă 2026-10-29 (regulamentul: 30 mm nominal)
 export const HOVER_DZ = 45.0; // cât de sus deasupra punctului de prindere se face apropierea
 export const PLACE_GAP = 3.0; // cubul e eliberat cu atâția mm mai sus decât poziția teoretică
 export const GRASP_DZ = 0.0; // corecție fină a înălțimii de prindere (+ = mai sus)

@@ -39,6 +39,7 @@ from brain.configuration.models import (
 )
 from brain.configuration.validation import Section
 from brain.domain.cube import KNOWN_COLORS, Color
+from brain.domain.grasp import GripperGeometry
 from brain.domain.errors import ConfigError
 
 SYSTEM_SCHEMA_VERSION = 2
@@ -95,7 +96,7 @@ def _check_schema(root: Section, expected: int) -> None:
 def load_system_config(path: PathLike) -> SystemConfig:
     root = read_yaml(path)
     root.reject_unknown(
-        ["schema_version", "cube", "locations", "vision", "memory", "arm", "timing", "planning", "preview"]
+        ["schema_version", "cube", "locations", "vision", "memory", "arm", "timing", "planning", "preview", "gripper"]
     )
     _check_schema(root, SYSTEM_SCHEMA_VERSION)
     cube_section = root.section("cube")
@@ -119,6 +120,33 @@ def load_system_config(path: PathLike) -> SystemConfig:
         preview=_parse_preview(root.section("preview")),
         source_file=root.file,
         lens=load_lens_config(Path(str(path)).parent / LENS_FILE),
+        gripper=_parse_gripper(root.section("gripper"), cube.size_mm) if root.has("gripper") else None,
+    )
+
+
+def _parse_gripper(s: Section, cube_mm: float) -> GripperGeometry:
+    s.reject_unknown(["max_open_mm", "finger_mm", "clearance_mm", "approach_margin_mm", "min_approach_margin_mm",
+                      "release_margin_mm", "min_release_margin_mm", "point_approach_margin_mm"])
+    max_open = s.number("max_open_mm", minimum=1.0, maximum=200.0)
+    if max_open <= cube_mm:
+        raise s.error("max_open_mm", max_open, "gheara trebuie să se deschidă mai mult decât cubul ({} mm)".format(cube_mm))
+    approach = s.number("approach_margin_mm", minimum=0.0, maximum=50.0)
+    min_approach = s.number("min_approach_margin_mm", minimum=0.0, maximum=50.0)
+    if min_approach > approach:
+        raise s.error("min_approach_margin_mm", min_approach, "trebuie <= approach_margin_mm={}".format(approach))
+    release = s.number("release_margin_mm", minimum=0.0, maximum=50.0)
+    min_release = s.number("min_release_margin_mm", minimum=0.0, maximum=50.0)
+    if min_release > release:
+        raise s.error("min_release_margin_mm", min_release, "trebuie <= release_margin_mm={}".format(release))
+    return GripperGeometry(
+        max_open_mm=max_open,
+        finger_mm=s.number("finger_mm", minimum=0.0, maximum=50.0, exclusive_minimum=True),
+        clearance_mm=s.number("clearance_mm", minimum=0.0, maximum=20.0),
+        approach_margin_mm=approach,
+        min_approach_margin_mm=min_approach,
+        release_margin_mm=release,
+        min_release_margin_mm=min_release,
+        point_approach_margin_mm=s.number("point_approach_margin_mm", default=approach, minimum=min_approach, maximum=50.0),
     )
 
 
@@ -152,7 +180,7 @@ def load_lens_config(path: PathLike) -> Optional[LensConfig]:
 
 
 def _parse_preview(s: Section) -> PreviewConfig:
-    s.reject_unknown(["host", "port", "max_fps", "jpeg_quality", "analyze_interval_s", "save_dir"])
+    s.reject_unknown(["host", "port", "max_fps", "jpeg_quality", "analyze_interval_s", "save_dir", "allow_execute"])
     return PreviewConfig(
         host=s.string("host"),
         port=s.integer("port", minimum=1, maximum=65535),
@@ -160,6 +188,7 @@ def _parse_preview(s: Section) -> PreviewConfig:
         jpeg_quality=s.integer("jpeg_quality", minimum=30, maximum=100),
         analyze_interval_s=s.number("analyze_interval_s", minimum=0.2, maximum=60.0),
         save_dir=s.string("save_dir"),
+        allow_execute=s.boolean("allow_execute", default=False),
     )
 
 

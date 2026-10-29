@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Dict, Optional, Tuple
 
 from brain.domain.cube import Color
+from brain.domain.grasp import GripperGeometry
 
 DETECTION_METHODS = ("lines", "aruco")
 
@@ -160,6 +161,7 @@ class PreviewConfig:
     jpeg_quality: int
     analyze_interval_s: float
     save_dir: str
+    allow_execute: bool = False  # butonul „Execută” din pagină (cu codul afișat în consolă); implicit oprit
 
 
 MATCH_FACE_POLICIES = ("prefer", "require", "ignore")
@@ -212,6 +214,7 @@ class SystemConfig:
     preview: PreviewConfig
     source_file: str
     lens: Optional[LensConfig] = None  # None: fără corecția distorsiunii (lens.yaml lipsește)
+    gripper: Optional[GripperGeometry] = None  # None: fără regulile de prindere (deschiderea o alege serviciul)
 
     def px_per_mm(self, location: str) -> float:
         """Scara imaginii redresate a unei locații (px/mm)."""

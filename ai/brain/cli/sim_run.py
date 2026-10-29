@@ -73,7 +73,7 @@ def run_scenario(config: AppConfig, scenario: Scenario, options: Optional[SimOpt
         world.physics = options.physics
     poses = {system.location(name).observe_pose: name for name in system.planning.active_locations
              if system.location(name).observe_pose}
-    mock = MockArm(world, poses, clock, faults=options.faults, seed=scenario.seed)
+    mock = MockArm(world, poses, clock, faults=options.faults, seed=scenario.seed, gripper=system.gripper)
     arm: Any = mock
     if options.service_url:
         from brain.adapters.arm.tee_arm import TeeArm
@@ -123,6 +123,7 @@ def run_scenario(config: AppConfig, scenario: Scenario, options: Optional[SimOpt
         "expected_success": scenario.expect_success, "simulated_time_s": round(clock.monotonic(), 2),
         "within_time_limit": clock.monotonic() <= system.timing.task_limit_s,
         "sim_events": list(world.events), "world_final": describe_world(world),
+        "finger_collisions": list(mock.collisions),
         "wall_time_s": round(time.perf_counter() - started, 2),
         "note_timing": "timpi SIMULAȚI (SimDurations), nu măsurători",
     })

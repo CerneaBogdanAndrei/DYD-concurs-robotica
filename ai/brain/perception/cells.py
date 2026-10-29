@@ -120,6 +120,14 @@ class CellAnalyzer:
         self._nadir: Optional[np.ndarray] = None
         self.ignored_side_faces = 0
 
+    def base_uv(self, uv_top: Tuple[float, float]) -> Tuple[float, float]:
+        """Centrul bazei (pe masă) din centrul feței de sus, în celule: în vederea oblică, fața de sus a unui cub
+        e împinsă dinspre nadir cu factorul `top_scale`; vederea de sus (fără nadir) nu are deplasare."""
+        if self.nadir_uv is None or self.top_scale <= 1.001:
+            return uv_top
+        nu, nv = self.nadir_uv
+        return (nu + (uv_top[0] - nu) / self.top_scale, nv + (uv_top[1] - nv) / self.top_scale)
+
     def analyze(self, rectified: np.ndarray, rows: int, cols: int, margin: int = 0) -> List[CellResult]:
         """`margin`: px de imagine redresată în jurul grilei (cuburile de pe margine pot depăși conturul)."""
         cfg = self.config

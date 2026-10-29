@@ -142,7 +142,10 @@ class SimWorld:
         yaw_deg: float,
         uv: Optional[Tuple[float, float]],
         force_miss: bool = False,
+        open_mm: Optional[float] = None,
     ) -> str:
+        """`open_mm` (deschiderea de abordare cerută): cubul e prins dacă încape între degete pe axa de închidere
+        (presupusă axa a a ghearei, la yaw-ul comandat), iar la strângere e centrat pe acea axă."""
         if self.is_unreachable(location, cell):
             return UNREACHABLE
         if self.held is not None:  # serviciul deschide gheara înainte de pick: cubul ținut cade
@@ -169,9 +172,17 @@ class SimWorld:
         else:
             error = cube.offset_mm
         distance = math.hypot(*error)
+        outside = distance > self.physics.grasp_tolerance_mm
+        if open_mm is not None:
+            psi = math.radians(yaw_deg)
+            along = error[0] * math.cos(psi) - error[1] * math.sin(psi)
+            across = error[0] * math.sin(psi) + error[1] * math.cos(psi)
+            room = max(self.physics.grasp_tolerance_mm, (open_mm - self.cube_mm) / 2.0)
+            outside = abs(along) > room or abs(across) > self.physics.grasp_tolerance_mm
+            error = (across * math.sin(psi), across * math.cos(psi))  # centrat de degete pe axa de închidere
         yaw_error = yaw_difference_deg(yaw_deg, cube.yaw_deg)
         failed = force_miss or self.rng.random() < self.physics.pick_fail_probability
-        if failed or distance > self.physics.grasp_tolerance_mm or yaw_error > self.physics.grasp_yaw_tolerance_deg:
+        if failed or outside or yaw_error > self.physics.grasp_yaw_tolerance_deg:
             nudge = self.rng.uniform(-2.0, 2.0, size=2)
             cube.offset_mm = (cube.offset_mm[0] + float(nudge[0]), cube.offset_mm[1] + float(nudge[1]))
             self.events.append(
@@ -192,7 +203,9 @@ class SimWorld:
         self._drop(self.held, self.hover.location)
         self.held = None
 
-    def place(self, location: str, cell: Optional[Tuple[int, int]], level: int, yaw_deg: float) -> str:
+    def place(self, location: str, cell: Optional[Tuple[int, int]], level: int, yaw_deg: float,
+              uv: Optional[Tuple[float, float]] = None) -> str:
+        """`uv` (doar la caroiaje) = unde coboară gheara; implicit centrul celulei."""
         if self.is_unreachable(location, cell):
             return UNREACHABLE
         self.hover = Hover(location, cell, level)
@@ -209,7 +222,12 @@ class SimWorld:
             return COLLISION
         sigma = self.physics.place_noise_mm * (1.0 + 6.0 * (level - height))  # eliberat din aer: împrăștiere mare
         noise = self.rng.normal(0.0, sigma, size=2)
-        cube.offset_mm = (self._held_error_mm[0] + float(noise[0]), self._held_error_mm[1] + float(noise[1]))
+        commanded = (0.0, 0.0)
+        if uv is not None and cell is not None:
+            size = self._cell_size(location)
+            commanded = ((uv[0] - cell[1] - 0.5) * size, (uv[1] - cell[0] - 0.5) * size)
+        cube.offset_mm = (commanded[0] + self._held_error_mm[0] + float(noise[0]),
+                          commanded[1] + self._held_error_mm[1] + float(noise[1]))
         cube.yaw_deg = normalize_yaw_deg(yaw_deg + self._held_yaw_rel + float(self.rng.normal(0.0, self.physics.place_yaw_noise_deg)))
         if height > 0:
             below = stack[-1]

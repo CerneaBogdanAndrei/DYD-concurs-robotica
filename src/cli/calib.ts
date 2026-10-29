@@ -8,6 +8,8 @@
 //   npm run calib -- test source 1 1         # brațul coboară pe celula r1c1 (verificare)
 //   npm run calib -- test zone_red
 //   npm run calib -- citeste                 # unghiuri + FK în timp real, cu cuplul oprit
+//   npm run calib -- gheara 60               # doar gheara la unghiul 60; măsurați deschiderea interioară (mm)
+//   npm run calib -- gheara                  # tabelul măsurat (unghi -> mm)
 //
 // Opțiuni: --calib <fișier> (implicit calib.json), --sim (placă simulată, fără I2C).
 // Colțurile caroiajului în imagine și pragurile HSV țin de viziune (creierul).
@@ -17,13 +19,13 @@ import { parseArgs } from "node:util";
 import type { DofbotArm } from "../arm/arm.js";
 import { openI2cArm } from "../arm/i2c.js";
 import { openSimArm } from "../arm/sim-board.js";
-import { type Calib, gridOf, loadCalib, requireSite, saveCalib } from "../calib.js";
+import { type Calib, gridOf, gripTable, loadCalib, requireSite, saveCalib } from "../calib.js";
 import * as C from "../config.js";
 import { Grid, type Vec3, parseCellLabel } from "../grid.js";
 import { fk } from "../kinematics.js";
 import { Robot } from "../robot.js";
 
-const USAGE = `Utilizare: npm run calib -- <poza NUME | celule LOC [--celule r0c0 ...] | zona NUME | test LOC [r c] | citeste> [--sim] [--calib FIȘIER]`;
+const USAGE = `Utilizare: npm run calib -- <poza NUME | celule LOC [--celule r0c0 ...] | zona NUME | test LOC [r c] | citeste | gheara [UNGHI]> [--sim] [--calib FIȘIER]`;
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
@@ -132,6 +134,40 @@ async function cmdTest(robot: Robot, calib: Calib, loc: string, rc: string[]) {
   await robot.home();
 }
 
+function printGripper(calib: Calib) {
+  const pts = [...(calib.gripper ?? [])].sort((a, b) => a[0] - b[0]);
+  if (pts.length === 0) console.log("Gheara: niciun unghi măsurat.");
+  for (const [angle, mm] of pts) console.log(`    servo 6 = ${angle}  ->  ${mm} mm`);
+  const ok = gripTable(calib).length > 0;
+  console.log(
+    ok
+      ? "Gheara e calibrată în mm: pick/place folosesc deschiderile de abordare și de eliberare (regulile A, C)."
+      : "Gheara NU e calibrată în mm (trebuie cel puțin 2 unghiuri, mm diferiți): pick/place deschid la GRIP_OPEN.",
+  );
+}
+
+/** Pune doar gheara la un unghi; utilizatorul măsoară deschiderea INTERIOARĂ cu șublerul. */
+async function cmdGheara(robot: Robot, calib: Calib, path: string, arg: string | undefined) {
+  if (arg === undefined) return printGripper(calib);
+  const angle = Number(arg);
+  if (!Number.isInteger(angle) || angle < C.JOINT_MIN[5]! || angle > C.JOINT_MAX[5]!) {
+    throw new Error(`unghiul ghearei trebuie întreg ${C.JOINT_MIN[5]}..${C.JOINT_MAX[5]} (GRIP_CLOSED=${C.GRIP_CLOSED})`);
+  }
+  await robot.gripper(angle);
+  const text = await rl.question(
+    `Gheara e la ${angle}. Măsurați distanța INTERIOARĂ dintre degete, în mm (Enter = nu salvez): `,
+  );
+  const mm = Number(text.trim().replace(",", "."));
+  if (text.trim() === "" || !Number.isFinite(mm) || mm <= 0 || mm > C.GRIP_MAX_OPEN_MM + 20) {
+    console.log("Nesalvat.");
+    return printGripper(calib);
+  }
+  calib.gripper = [...(calib.gripper ?? []).filter((p) => p[0] !== angle), [angle, mm]];
+  saveCalib(calib, path);
+  console.log(`Salvat: servo 6 = ${angle} -> ${mm} mm.`);
+  printGripper(calib);
+}
+
 async function cmdCiteste(robot: Robot) {
   await robot.torque(false);
   console.log("Cuplu oprit. Mișcați brațul; Ctrl+C pentru ieșire.");
@@ -173,6 +209,7 @@ async function main() {
     } else if (cmd === "zona" && args[0]) await cmdZona(robot, calib, path, args[0]);
     else if (cmd === "test" && args[0]) await cmdTest(robot, calib, args[0], args.slice(1));
     else if (cmd === "citeste") await cmdCiteste(robot);
+    else if (cmd === "gheara") await cmdGheara(robot, calib, path, args[0]);
     else throw new Error(USAGE);
   } finally {
     rl.close();

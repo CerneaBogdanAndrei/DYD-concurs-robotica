@@ -13,9 +13,12 @@ def test_real_config_loads(app_config):
     system, colors = app_config.system, app_config.colors
     assert set(system.locations) == {"small", "medium", "large"}
     assert system.vision.detection_method == "lines"
-    assert system.cube.calibrated is False and colors.calibrated is False
+    assert system.cube.calibrated is True and system.cube.size_mm == 29.0  # măsurat de echipă
+    assert colors.calibrated is False
     assert system.px_per_mm("medium") == pytest.approx(100.0 / 43.0)
-    assert system.cube_px("medium") == pytest.approx(30.0 * 100.0 / 43.0)
+    assert system.cube_px("medium") == pytest.approx(29.0 * 100.0 / 43.0)
+    assert system.gripper is not None and system.gripper.side_space_mm == pytest.approx(7.0)
+    assert system.preview.allow_execute is False
     assert system.planning.active_locations == ("medium",)
     assert app_config.sort_map.zone_for(Color.RED).name == "zone_red"
     assert {c.color for c in colors.classes} == {Color.RED, Color.YELLOW, Color.GREEN, Color.BLUE}

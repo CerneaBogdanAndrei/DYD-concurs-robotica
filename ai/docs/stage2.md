@@ -4,6 +4,60 @@ Data: 2026-10-29. Lucrat pe Raspberry Pi (Debian 13, aarch64, Python 3.13.5, Nod
 **Nimic din această etapă nu a fost testat pe braț sau pe camera reală.** Tot ce urmează e verificat în simulare
 și împotriva serviciului colegilor pornit cu `--sim`.
 
+## Actualizare 2026-10-29 seara (laptop, Windows): pagina de lucru și gheara printre cuburi
+
+**Nimic din această actualizare nu a fost testat pe braț sau pe camera reală.** Măsurători noi de la echipă:
+cubul are **29 mm** (`cube.size_mm: 29`, `calibrated: true`; în serviciu `CUBE_MM` 30 → 29), celula foii mici
+45 × 43 mm (neschimbat), gheara: deschidere interioară maximă 60 mm, deget 6 mm, deci 7 mm liberi per latură.
+
+| Modul | Rol |
+|---|---|
+| `brain/domain/grasp.py` | Geometria prinderii (fără numpy): bazele cuburilor, spațiul liber pe fiecare latură (bandă cât fața, cu vecinii rotiți/deplasați), `plan_grasp` (deschiderea de abordare + offset pe ambele axe ale cubului), `plan_release` (deschiderea mică la eliberare), degetele și suprapunerea (verificare în simulare). |
+| `brain/perception/pipeline.py`, `annotate.py` | Laturile fiecărui cub (mm) și spațiile până la vecini, în `CellObservation.metrics`; desenate pe imaginea adnotată și pe fluxul live (conturul colorat după starea prinderii). |
+| `brain/planning/planner.py` | Fiecare mutare are `open_mm` (abordare), `uv` cu offset spre spațiul mai mare (regula B), `release_mm` (eliberare) și, la stivuire, `uv` = cubul de dedesubt; prinderile/eliberările riscante apar ca avertismente. |
+| `brain/perception/target_photo.py` | Ținta S1 din poză: `TopViewPipeline` (fără obiectivul brațului, fără nadir/înălțime, un cadru), micșorare la 1280 px. |
+| `brain/cli/workbench.py`, `web_execution.py` | Masa de lucru a paginii: ținta (poză/editare/salvare), planul (din ultima observație, printr-un `TaskRunner` fără execuție), starea serviciului, execuția cu cod. |
+| `brain/adapters/preview_server.py`, `preview_page.py` | Rutele noi și pagina (fără resurse externe). |
+| `src/robot.ts`, `src/service.ts`, `src/calib.ts`, `src/cli/calib.ts` (colegii, cu acordul lui Bogdan) | Regulile A și C, `grip_mm`/`release_mm`/`uv` la `place`, tabelul ghearei în `calib.json` (`npm run calib -- gheara UNGHI`). Vezi constatarea 14 din `questions-for-kinematics-team.md`. |
+
+**Regulile ghearei.** A: `pick` urcă întâi pe verticală (dacă e jos), pre-închide gheara la deschiderea de abordare
+(29 + 2 × 5 = 39 mm) și abia apoi se deplasează. B: un deget are nevoie de 6 + 0,5 + 0,5 = 7 mm lângă cub; dacă un
+vecin e mai aproape, centrul ghearei se mută spre spațiul mai mare cât să rămână 0,5 mm față de vecin, fără să
+iasă din jurul cubului. Gheara e simetrică, deci degetul din partea strâmtă atinge primul cubul și îl împinge spre
+spațiul liber (adică departe de vecin), nu invers. C: `place` se deschide doar la 29 + 2 × 3 = 35 mm (mai puțin,
+până la 31 mm, dacă vecinii sunt aproape) și urcă strict vertical (6 pași) până la 70 mm. Serviciul aplică A și C
+doar după calibrarea ghearei în mm; până atunci se deschide la `GRIP_OPEN`, ca înainte.
+
+**Axa de închidere nu e cunoscută brain-ului** (o alege încheietura, constatarea 13): deschiderea aleasă încape pe
+ambele axe, iar offset-ul se calculează pe fiecare. Costul: pe axa pe care gheara nu se închide, cubul rămâne
+ținut decalat (≤ ~4,5 mm). De aceea, la stivuire `place` primește poziția cubului de dedesubt, iar la zone/puncte
+tampon (nevăzute, fără vecini) abordarea e mai largă (49 mm).
+
+**Pagina de lucru** (`brain camera preview`): descrierea completă în `README.md`. Ținta confirmată ajunge în
+`out/preview/target/target.yaml` (formatul `--target-file`), rulările din pagină în `out/preview/runs/`.
+Execuția din pagină: implicit oprită (`preview.allow_execute: false`), apoi cu codul din consolă, o singură
+execuție, „Oprește” după comanda curentă fără `home`, verificare vizuală finală.
+
+**Rezultate măsurate (laptop; date sintetice):**
+- teste: Python 3.12 (numpy 2.5.4, OpenCV 5.0.0) **433 trecute, 1 sărit** (66 s); Python 3.8.20 (numpy 1.24.4,
+  OpenCV 4.6.0.66) **433 trecute, 1 sărit** (68 s); serviciul colegilor 58/58 (`node --test`); brain împotriva
+  serviciului real pornit cu `--sim` (`test_team_service.py`, cu `dist/` compilat) 3/3;
+- atingeri ale degetelor cu vecinii în simulare (60 de scenarii aleatoare, seed 1000..1019 × turn/reproducere/sortare,
+  percepție oracol, 2 puncte tampon, foaia small): gheara veche (larg deschisă, pe centru) **368 de atingeri** în
+  364 de mutări (56 de scenarii), regulile noi **25 de atingeri** în 363 de mutări (21 de scenarii). Reușite 55/60 →
+  54/60: diferența e reproduce_1008, unde un cub lipit de vecin (prindere deja riscantă, atinsă și de gheara veche)
+  ajunge decalat 7,2 mm în punctul tampon și e ratat (toleranța laterală a simulării: 7 mm);
+- ținta din poză: o poză sintetică „de telefon” 1600 × 1200 (rotită 22°, perspectivă 14%) e recunoscută corect
+  (9/9 celule, PNG și JPEG); o imagine fără caroiaj e respinsă cu motivul în clar;
+- comanda reală pe cadre sintetice: flux 29–31 cadre/s, analiza în proces separat ~190–250 ms; pagina verificată
+  vizual în Edge headless (desktop și ~500 px).
+
+**Limitări:** cuburile puse de juriu în afara caroiajului nu sunt văzute și nu pot fi luate (planul folosește doar
+șabloanele active și punctele tampon calibrate); deschiderea ghearei în mm depinde de tabelul măsurat pe braț
+(încă nemăsurat); „la milimetru” cere viziune precisă la ~1 mm, iar pe camera reală precizia nu e măsurată; poza
+țintei presupune vedere de sus (o poză foarte oblică poate confunda fețele laterale colorate), iar orientarea se
+corectează cu ⟲/⟳.
+
 ## Ce s-a schimbat față de prompt
 
 - **O singură foaie.** Echipa a primit trei foi A4, fiecare cu un singur caroiaj 3×3, și a ales foaia `medium`

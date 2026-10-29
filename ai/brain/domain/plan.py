@@ -50,12 +50,16 @@ class ObserveAction:
 
 @dataclass(frozen=True)
 class PickAction:
-    """`yaw_deg` în convenția sistemului (antiorar pozitiv); `uv` = centrul bazei cubului, corectat de paralaxă."""
+    """`yaw_deg` în convenția sistemului (antiorar pozitiv); `uv` = unde coboară centrul ghearei: centrul bazei
+    cubului (corectat de paralaxă), plus offset-ul spre spațiul mai mare când un vecin e prea aproape.
+    `open_mm` = deschiderea de abordare (interioară); `grasp` = starea prinderii (`GraspPlan.status`)."""
 
     slot: SlotRef
     level: int
     yaw_deg: float = 0.0
     uv: Optional[Tuple[float, float]] = None
+    open_mm: Optional[float] = None
+    grasp: str = ""
 
     def __post_init__(self) -> None:
         _check_level(self.level)
@@ -63,18 +67,27 @@ class PickAction:
             raise DomainValidationError("yaw_deg nefinit")
         if self.uv is not None and (self.slot.is_zone or not all(math.isfinite(v) for v in self.uv)):
             raise DomainValidationError("uv e permis doar pentru celule, cu valori finite")
+        _check_opening(self.open_mm)
 
 
 @dataclass(frozen=True)
 class PlaceAction:
+    """`release_mm` = deschiderea la eliberare (interioară, mică: regula C). `uv` = unde se pune cubul (la
+    stivuire, poziția cubului de dedesubt); None = centrul celulei."""
+
     slot: SlotRef
     level: int
     yaw_deg: float = 0.0
+    release_mm: Optional[float] = None
+    uv: Optional[Tuple[float, float]] = None
 
     def __post_init__(self) -> None:
         _check_level(self.level)
         if not math.isfinite(self.yaw_deg):
             raise DomainValidationError("yaw_deg nefinit")
+        _check_opening(self.release_mm)
+        if self.uv is not None and (self.slot.is_zone or not all(math.isfinite(v) for v in self.uv)):
+            raise DomainValidationError("uv e permis doar pentru celule, cu valori finite")
 
 
 @dataclass(frozen=True)
@@ -93,6 +106,8 @@ class RecoveryAction:
 Action = Union[ObserveAction, PickAction, PlaceAction, VerifyAction, RecoveryAction]
 
 PURPOSES = ("goal", "clear", "sort", "staging")
+_GRASP_NOTES = {"offset": ", cu offset", "risky": ", RISC: degetele încap pe o singură axă",
+                "blocked": ", RISC: degetele ating vecinii"}
 
 
 @dataclass(frozen=True)
@@ -131,15 +146,24 @@ class Plan:
     def explanation(self) -> List[str]:
         lines = []
         for index, move in enumerate(self.moves, 1):
+            grip = ""
+            if move.pick.open_mm is not None:
+                grip = " [gheară {:.0f}/{:.0f} mm{}]".format(
+                    move.pick.open_mm, move.place.release_mm or 0.0, _GRASP_NOTES.get(move.pick.grasp, ""))
             lines.append(
-                "{:>2}. {} {} (niv. {}) -> {} (niv. {}): {}{}".format(
+                "{:>2}. {} {} (niv. {}) -> {} (niv. {}): {}{}{}".format(
                     index, move.cube.color.value, move.pick.slot, move.pick.level, move.place.slot, move.place.level,
-                    move.reason, " [cost substitut]" if move.cost_is_substitute else "",
+                    move.reason, grip, " [cost substitut]" if move.cost_is_substitute else "",
                 )
             )
         lines.extend("NEÎNDEPLINIT: {}".format(text) for text in self.unmet)
         lines.extend("ATENȚIE: {}".format(text) for text in self.warnings)
         return lines
+
+
+def _check_opening(value: Optional[float]) -> None:
+    if value is not None and (not math.isfinite(value) or value <= 0.0):
+        raise DomainValidationError("deschiderea ghearei invalidă: {!r}".format(value))
 
 
 def _check_level(level: int) -> None:

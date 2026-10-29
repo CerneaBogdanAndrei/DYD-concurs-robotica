@@ -77,6 +77,20 @@ def check_uv(uv: Any, cell: Optional[Tuple[int, int]]) -> Optional[Tuple[float, 
     return (float(uv[0]), float(uv[1]))
 
 
+MAX_OPENING_MM = 200.0
+
+
+def check_opening(value: Any, name: str) -> Optional[float]:
+    """Deschiderea ghearei în mm (interioară) sau None (serviciul alege)."""
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+        raise InvalidCommand("{} invalid: {!r}".format(name, value))
+    if not 0.0 < value <= MAX_OPENING_MM:
+        raise InvalidCommand("{} = {} în afara (0, {}] mm".format(name, value, MAX_OPENING_MM))
+    return float(value)
+
+
 def check_location(location: Any) -> str:
     if not isinstance(location, str) or not location:
         raise InvalidCommand("location trebuie să fie un șir nevid, nu {!r}".format(location))

@@ -17,6 +17,7 @@ from typing import Dict, FrozenSet, List, Optional, Set, Tuple
 
 from brain.configuration.models import SortMapConfig, SystemConfig
 from brain.domain.cube import KNOWN_COLORS, Color, TopFace
+from brain.domain.grasp import Clearances, Footprint, clearances, footprint_from_uv, plan_grasp, plan_release
 from brain.domain.plan import CubeRef, Move, PickAction, PlaceAction, Plan, SlotRef, correct_parallax
 from brain.domain.scene_state import SceneState
 from brain.planning.cost import CostModel
@@ -126,15 +127,74 @@ class _Builder:
             options.append((1, cost, _slot_key(slot), slot))
         return min(options)[3] if options else None
 
+    def _base_uv(self, slot: SlotRef, cube: PlanCube, height: int) -> Optional[Tuple[float, float]]:
+        """Centrul bazei cubului din vârful unei stive de `height` cuburi (corectat de paralaxă), dacă e cunoscut."""
+        if slot.is_zone or cube.uv_top is None:
+            return None
+        loc = self.system.location(slot.location)
+        return correct_parallax(cube.uv_top, height * self.system.cube.size_mm, loc.camera_height_mm, loc.nadir_uv)
+
+    def _footprints(self, slot: SlotRef, above_level: int) -> List[Footprint]:
+        """Bazele vecinilor din același caroiaj care ajung mai sus de nivelul `above_level` (ceilalți sunt sub degete)."""
+        loc = self.system.location(slot.location)
+        prints = []
+        for other in self.world.grid_slots([slot.location]):
+            stack = self.world.stack(other)
+            if other == slot or len(stack) <= above_level:
+                continue
+            assert other.cell is not None
+            uv = self._base_uv(other, stack[-1], len(stack)) or (other.cell.col + 0.5, other.cell.row + 0.5)
+            prints.append(footprint_from_uv(uv, stack[-1].yaw_deg, loc.cell_mm, self.system.cube.size_mm))
+        return prints
+
     def _pick_action(self, slot: SlotRef, cube: PlanCube, level: int) -> PickAction:
-        uv = None
-        if not slot.is_zone and cube.uv_top is not None:
-            loc = self.system.location(slot.location)
-            top_height = (level + 1) * self.system.cube.size_mm
-            u, v = correct_parallax(cube.uv_top, top_height, loc.camera_height_mm, loc.nadir_uv)
-            uv = (round(min(max(u, 0.0), float(loc.cols), 3.0), 4), round(min(max(v, 0.0), float(loc.rows), 3.0), 4))
+        uv = self._base_uv(slot, cube, level + 1)
         yaw = cube.yaw_deg if cube.yaw_deg is not None else 0.0
-        return PickAction(slot, level, yaw_deg=float(yaw), uv=uv)
+        gripper = self.system.gripper
+        open_mm, status = None, ""
+        if gripper is not None:
+            if slot.is_zone or slot.cell is None:  # zone/tampoane: fără vecini, dar poziția nu se vede: mai larg
+                side = self.system.cube.size_mm
+                open_mm = round(min(gripper.max_open_mm, side + 2 * gripper.point_approach_margin_mm), 1)
+                return PickAction(slot, level, yaw_deg=float(yaw), uv=None, open_mm=open_mm, grasp="centered")
+            else:
+                loc = self.system.location(slot.location)
+                center = uv or (slot.cell.col + 0.5, slot.cell.row + 0.5)
+                target = footprint_from_uv(center, yaw, loc.cell_mm, self.system.cube.size_mm)
+                grasp = plan_grasp(target, clearances(target, self._footprints(slot, level)), gripper, loc.cell_mm)
+                if uv is not None or not grasp.centered:  # offset-ul (regula B) se trimite prin uv
+                    uv = (center[0] + grasp.offset_uv[0], center[1] + grasp.offset_uv[1])
+                if not grasp.feasible:
+                    self._note(self.warnings, "prindere riscantă pe {}: {}".format(slot, "; ".join(grasp.notes)))
+            open_mm, status = grasp.open_mm, grasp.status
+        if uv is not None:
+            loc = self.system.location(slot.location)
+            uv = (round(min(max(uv[0], 0.0), float(loc.cols), 3.0), 4), round(min(max(uv[1], 0.0), float(loc.rows), 3.0), 4))
+        return PickAction(slot, level, yaw_deg=float(yaw), uv=uv, open_mm=open_mm, grasp=status)
+
+    def _place_action(self, slot: SlotRef, level: int) -> PlaceAction:
+        """Eliberarea cu deschidere mică (regula C), cât permit vecinii slotului țintă. Pe o stivă, cubul se pune
+        peste cel de dedesubt (poziția lui văzută), nu în centrul celulei: decalajele nu se adună."""
+        uv = None
+        if level > 0 and not slot.is_zone:
+            below = self.world.stack(slot)[level - 1] if self.world.height(slot) > level else None
+            uv = self._base_uv(slot, below, level) if below is not None else None
+            if uv is not None:
+                loc = self.system.location(slot.location)
+                uv = (round(min(max(uv[0], 0.0), float(loc.cols), 3.0), 4), round(min(max(uv[1], 0.0), float(loc.rows), 3.0), 4))
+        gripper = self.system.gripper
+        if gripper is None:
+            return PlaceAction(slot, level, 0.0, uv=uv)
+        side = self.system.cube.size_mm
+        gaps = Clearances()
+        if not slot.is_zone and slot.cell is not None:
+            loc = self.system.location(slot.location)
+            target = footprint_from_uv(uv or (slot.cell.col + 0.5, slot.cell.row + 0.5), 0.0, loc.cell_mm, side)
+            gaps = clearances(target, self._footprints(slot, level))
+        release = plan_release(gaps, gripper, side)
+        if not release.feasible:
+            self._note(self.warnings, "eliberare riscantă pe {}: {}".format(slot, "; ".join(release.notes)))
+        return PlaceAction(slot, level, 0.0, release_mm=release.release_mm, uv=uv)
 
     def _estimate(self, source: SlotRef, target: SlotRef) -> float:
         timing = self.system.timing
@@ -149,17 +209,20 @@ class _Builder:
         level = self.world.height(source) - 1
         place_level = self.world.height(target)
         cost, substitute = self._cost(source, target)
+        pick = self._pick_action(source, cube, level)
+        self.world.move_top(source, target)
+        # Eliberarea se calculează după mutare: cubul ținut nu e propriul vecin la destinație.
+        place = self._place_action(target, place_level)
         self.moves.append(Move(
             cube=CubeRef(source, level, cube.color, cube.top_face),
-            pick=self._pick_action(source, cube, level),
-            place=PlaceAction(target, place_level, 0.0),
+            pick=pick,
+            place=place,
             purpose=purpose,
             reason=reason,
             cost_deg=cost,
             cost_is_substitute=substitute,
             estimated_s=self._estimate(source, target),
         ))
-        self.world.move_top(source, target)
         self.previous = target
 
     def _highest(self, slot: SlotRef, color: Color, face: Optional[TopFace] = None) -> Optional[Tuple[int, int]]:

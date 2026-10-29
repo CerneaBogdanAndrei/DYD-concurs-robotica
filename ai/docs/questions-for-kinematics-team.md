@@ -84,6 +84,23 @@ lumea simulată a brain-ului), cu `ai/tests/fixtures/calib_brain.json` (poziții
 13. **Axa degetelor nu poate fi aleasă.** `wristForYaw` aduce mereu încheietura la ±45° de centru, deci un cub cu
     vecini la stânga și la dreapta nu poate fi prins cu degetele pe direcția liberă (rotit cu 90°). Cerere: un
     parametru (de ex. `finger_axis: "cols" | "rows"`) sau acceptarea unui yaw pe 0..180° fără reducere modulo 90°.
+    Între timp, brain-ul alege o deschidere care încape pe AMBELE axe și calculează offset-ul pe fiecare axă.
+14. **Schimbat în serviciu (2026-10-29, cu acordul explicit al lui Bogdan): gheara în mm, regulile A și C.**
+    Modificat de sesiunea Claude a brain-ului, ca răspuns la constatarea 12. Vă rugăm să verificați:
+    - `src/config.ts`: `CUBE_MM` 30 → **29** (măsurat de echipă); `GRIP_MAX_OPEN_MM` 60, `GRIP_FINGER_MM` 6 (date de
+      echipă), `APPROACH_MARGIN_MM` 5, `RELEASE_MARGIN_MM` 3, `VERTICAL_STEPS` 6. `GRIP_OPEN`/`GRIP_CLOSED` neschimbate;
+    - `src/calib.ts` + `src/cli/calib.ts`: tabelul ghearei `[unghi servo 6, deschidere interioară mm]` în `calib.json`,
+      măsurat cu `npm run calib -- gheara UNGHI` (doar gheara se mișcă; se cere deschiderea măsurată cu șublerul);
+    - `src/robot.ts`: **A** `pick` urcă întâi pe verticală dacă e sub `TRANSIT_MIN_Z`, apoi pre-închide gheara la
+      deschiderea de abordare și abia apoi se deplasează (nu mai călătorește la `GRIP_OPEN`); **C** `place` se deschide
+      doar la deschiderea de eliberare și urcă strict vertical (6 pași) până la `TRANSIT_MIN_Z`, fără mișcare pe XY;
+      coborârea/ridicarea lângă cuburi au 6 pași în loc de 3;
+    - `src/service.ts`: `pick` primește `grip_mm`, `place` primește `release_mm` (opționale; cer gheara calibrată,
+      altfel `calibrare` 409); fără ele, cu gheara calibrată, cubul + 2 × marja; necalibrată, `GRIP_OPEN` ca înainte.
+      `status` are în plus `cube_mm`, `grip_calibrated`, `grip_range_mm`;
+    - teste noi în `test/robot.test.ts` și `test/service.test.ts` (58/58 trec), `docs/CONTRACT_BRAT.md` actualizat.
+    **Nevalidat pe braț.** De făcut pe Pi: măsurarea ghearei (de ex. `npm run calib -- gheara 135`, `110`, `90`, `60`),
+    apoi `npm run calib -- test small 1 1` și o prindere între doi vecini, cu mâna pe alimentare.
 
 ## Contractul inițial (înainte de `CONTRACT_BRAT.md`)
 

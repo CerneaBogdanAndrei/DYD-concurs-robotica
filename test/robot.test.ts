@@ -34,7 +34,7 @@ describe("Robot (mișcări portate din dofbot.py)", () => {
     assert.deepEqual([0.5, 1.5, 2.5, 3.5, 2.4, 2.6, 89.5].map(roundHalfEven), [0, 2, 2, 4, 2, 3, 90]);
   });
 
-  it("pick: apropiere sus, coborâre în FINE_STEPS pași, strânge, ridică", async () => {
+  it("pick: apropiere sus, coborâre în VERTICAL_STEPS pași, strânge, ridică", async () => {
     const { robot, events } = await recorded();
     robot.grip = 0; // gheara nu e deschisă -> pick o deschide întâi
     await robot.pick(200, 40, 15, 10);
@@ -46,14 +46,14 @@ describe("Robot (mișcări portate din dofbot.py)", () => {
     // tranzit la max(HOVER, TRANSIT_MIN_Z) deasupra punctului de prindere
     const zh = 15 + C.HOVER_DZ;
     assert.ok(Math.abs(before[0]!.z - Math.max(zh, C.TRANSIT_MIN_Z)) < TOL);
-    // coborârea finală are FINE_STEPS pași pe aceeași verticală și se termină la z
-    const descent = before.slice(-C.FINE_STEPS);
+    // coborârea finală are VERTICAL_STEPS pași pe aceeași verticală și se termină la z
+    const descent = before.slice(-C.VERTICAL_STEPS);
     for (const p of descent) {
       assert.ok(Math.hypot(p.x - 200, p.y - 40) < TOL, `deviere laterală la z=${p.z}`);
-      assert.equal(p.t, Math.trunc(C.T_FINE / C.FINE_STEPS));
+      assert.equal(p.t, Math.trunc(C.T_FINE / C.VERTICAL_STEPS));
     }
     assert.ok(Math.abs(descent.at(-1)!.z - 15) < TOL);
-    assert.equal(after.length, C.FINE_STEPS);
+    assert.equal(after.length, C.VERTICAL_STEPS);
     assert.ok(Math.abs(after.at(-1)!.z - zh) < TOL);
   });
 
@@ -79,6 +79,42 @@ describe("Robot (mișcări portate din dofbot.py)", () => {
     const low = moves(events.slice(0, openAt)).at(-1)!;
     assert.ok(Math.abs(low.z - (45 + C.PLACE_GAP)) < TOL);
     assert.equal(robot.grip, C.GRIP_OPEN);
+  });
+
+  it("regula A: gheara se pre-închide la deschiderea de abordare înainte de orice deplasare", async () => {
+    const { robot, events } = await recorded();
+    await robot.place(180, -60, 15, 0, 120); // după o eliberare cu deschidere mică, brațul e sus, gheara la 120
+    events.length = 0;
+    await robot.pick(220, 40, 15, 0, 110);
+    assert.deepEqual(events[0], { kind: "grip", v: 110 }, "prima comandă e gheara, înaintea oricărei mișcări");
+    const closeAt = events.findIndex((e) => e.kind === "grip" && e.v === C.GRIP_CLOSED);
+    assert.ok(events.slice(1, closeAt).every((e) => e.kind === "move"), "gheara nu se mai deschide pe drum");
+    assert.ok(!events.some((e) => e.kind === "grip" && e.v === C.GRIP_OPEN), "nicio deschidere la GRIP_OPEN");
+  });
+
+  it("regula A: dacă brațul e jos, întâi urcă pe verticală, apoi schimbă gheara", async () => {
+    const { robot, events } = await recorded();
+    await robot.goto(200, 0, 20, 0); // jos, lângă cuburi
+    robot.grip = C.GRIP_CLOSED;
+    events.length = 0;
+    await robot.pick(240, 40, 15, 0, 110);
+    const gripAt = events.findIndex((e) => e.kind === "grip");
+    const lift = moves(events.slice(0, gripAt));
+    assert.ok(lift.length > 0 && lift.every((p) => Math.hypot(p.x - 200, p.y) < TOL), "urcarea e pe loc");
+    assert.ok(Math.abs(lift.at(-1)!.z - C.TRANSIT_MIN_Z) < TOL);
+  });
+
+  it("regula C: eliberare cu deschidere mică, apoi urcare strict verticală până la tranzit", async () => {
+    const { robot, events } = await recorded();
+    await robot.place(200, 0, 15, 0, 120);
+    const openAt = events.findIndex((e) => e.kind === "grip");
+    assert.deepEqual(events[openAt], { kind: "grip", v: 120 });
+    assert.equal(events.filter((e) => e.kind === "grip").length, 1, "gheara nu se redeschide larg");
+    const lift = moves(events.slice(openAt));
+    assert.equal(lift.length, C.VERTICAL_STEPS);
+    for (const p of lift) assert.ok(Math.hypot(p.x - 200, p.y) < TOL, `deviere laterală la z=${p.z}`);
+    assert.ok(lift.at(-1)!.z >= C.TRANSIT_MIN_Z - TOL);
+    assert.equal(robot.grip, 120);
   });
 
   it("punct inaccesibil: Unreachable înainte de orice mișcare", async () => {

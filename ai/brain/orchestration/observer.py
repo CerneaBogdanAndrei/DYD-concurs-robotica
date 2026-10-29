@@ -44,7 +44,8 @@ class CameraPerception:
 
         frames = self.camera.grab(self.frames)
         result = self.pipeline.analyze(frames, location)
-        return PerceptionResult(result.observation, frames[-1] if frames else None, render_annotation(result))
+        gripper = getattr(getattr(self.pipeline, "system", None), "gripper", None)
+        return PerceptionResult(result.observation, frames[-1] if frames else None, render_annotation(result, gripper))
 
 
 class LocationObserver:
@@ -114,6 +115,6 @@ class LocationObserver:
             if result.raw is not None:
                 self.hub.publish_raw(encode_jpeg(result.raw, quality))
             annotated = encode_jpeg(result.annotated, quality) if result.annotated is not None else None
-            self.hub.publish_analysis(annotated, summarize(result.observation))
+            self.hub.publish_analysis(annotated, summarize(result.observation, self.system), result.observation)
         except PerceptionInputError as exc:  # previzualizarea nu are voie să oprească sarcina
             log_event(logger, "preview_publish", level=logging.WARNING, result="error", error=str(exc))

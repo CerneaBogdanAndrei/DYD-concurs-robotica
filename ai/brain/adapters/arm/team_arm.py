@@ -52,6 +52,9 @@ class TeamArm:
         self.position_uncertain = False
         #: tipul fiecărui loc ("grid" | "point"), citit din `status.sites` la `connect()`
         self.sites: Dict[str, str] = {}
+        #: serviciul aplică deschiderile cerute (`grip_mm`, `release_mm`): gheara lui e calibrată în mm
+        self.grip_control = False
+        self.grip_range: Optional[Tuple[float, float]] = None  # deschiderile măsurate (min, max), mm
 
     # ------------------------------------------------------------------ transport
     def _call(self, name: str, body: Optional[Dict[str, Any]] = None) -> Any:
@@ -122,7 +125,20 @@ class TeamArm:
         self.mode = MODE_SIMULATION if status.get("sim") else MODE_HARDWARE
         sites = status.get("sites")
         self.sites = {str(k): str(v) for k, v in sites.items()} if isinstance(sites, dict) else {}
+        self.grip_control = status.get("grip_calibrated") is True
+        span = status.get("grip_range_mm")
+        valid = isinstance(span, list) and len(span) == 2 and all(isinstance(x, (int, float)) for x in span)
+        self.grip_range = (float(span[0]), float(span[1])) if valid else None
         return status
+
+    def _grip_mm(self, value: Optional[float], name: str) -> Optional[float]:
+        """Deschiderea trimisă serviciului: doar dacă gheara lui e calibrată, adusă în intervalul măsurat."""
+        opening = v.check_opening(value, name)
+        if opening is None or not self.grip_control:
+            return None
+        if self.grip_range is not None:
+            opening = min(max(opening, self.grip_range[0]), self.grip_range[1])
+        return round(opening, 1)
 
     def _yaw_for(self, location: str, cell: Optional[Tuple[int, int]], yaw_deg: float) -> float:
         """Inversează semnul doar la caroiaje; la zone (punct) yaw-ul e deja în sistemul robotului."""
@@ -160,6 +176,7 @@ class TeamArm:
         yaw_deg: float = 0.0,
         level: int = 0,
         uv: Optional[Tuple[float, float]] = None,
+        open_mm: Optional[float] = None,
     ) -> bool:
         cell = v.check_cell(cell)
         body: Dict[str, Any] = {
@@ -171,16 +188,26 @@ class TeamArm:
         checked_uv = v.check_uv(uv, cell)
         if checked_uv is not None:
             body["uv"] = [checked_uv[0], checked_uv[1]]
+        opening = self._grip_mm(open_mm, "open_mm")
+        if opening is not None:  # gheara necalibrată în serviciu: el alege deschiderea (GRIP_OPEN)
+            body["grip_mm"] = opening
         return self._outcome(self._call("pick", body))
 
-    def place(self, location: str, cell: Optional[Tuple[int, int]] = None, level: int = 0, yaw_deg: float = 0.0) -> bool:
+    def place(self, location: str, cell: Optional[Tuple[int, int]] = None, level: int = 0, yaw_deg: float = 0.0,
+              release_mm: Optional[float] = None, uv: Optional[Tuple[float, float]] = None) -> bool:
         cell = v.check_cell(cell)
-        body = {
+        body: Dict[str, Any] = {
             "location": v.check_location(location),
             "cell": None if cell is None else [cell[0], cell[1]],
             "level": v.check_level(level),
             "yaw_deg": self._yaw_for(location, cell, v.check_yaw(yaw_deg)),
         }
+        checked_uv = v.check_uv(uv, cell)
+        if checked_uv is not None:
+            body["uv"] = [checked_uv[0], checked_uv[1]]
+        opening = self._grip_mm(release_mm, "release_mm")
+        if opening is not None:
+            body["release_mm"] = opening
         return self._outcome(self._call("place", body))
 
     def read_joints(self) -> List[float]:

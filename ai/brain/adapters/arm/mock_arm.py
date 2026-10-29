@@ -14,6 +14,7 @@ import numpy as np
 
 from brain.adapters.arm import validation as v
 from brain.domain.errors import ArmCommunicationError, ArmTimeout, CalibrationMissing, InvalidCommand
+from brain.domain.grasp import Footprint, GripperGeometry, convex_overlap, finger_polygons
 from brain.ports.arm import MODE_SIMULATION
 from brain.ports.sensors import Clock
 from brain.simulation.sim_world import GRASPED, UNREACHABLE, SimWorld
@@ -70,8 +71,11 @@ class MockArm:
         durations: Optional[SimDurations] = None,
         faults: Sequence[FaultSpec] = (),
         seed: int = 0,
+        gripper: Optional[GripperGeometry] = None,
     ) -> None:
         self.world = world
+        self.gripper = gripper  # None: fără verificarea degetelor
+        self.collisions: List[str] = []
         self.poses = set(poses) | {"home"}
         self.clock = clock
         self.durations = durations or SimDurations()
@@ -133,6 +137,32 @@ class MockArm:
                 raise InvalidCommand("cell {} în afara caroiajului {}".format(cell, location))
         elif cell is not None:
             raise InvalidCommand("locul '{}' e o zonă: cell trebuie să lipsească".format(location))
+
+    def _check_fingers(self, method: str, location: str, cell: Optional[Tuple[int, int]], level: int, yaw_deg: float,
+                       uv: Optional[Tuple[float, float]], opening: Optional[float]) -> None:
+        """Degetele, la deschiderea cu care coboară (pick) sau se deschid (place), ating un cub vecin?
+
+        Doar o constatare în `world.events` și `collisions` (fără efect fizic). Fără deschidere cerută se
+        presupune gheara deschisă la maximum, ca serviciul necalibrat (GRIP_OPEN). Axa de închidere: axa a.
+        """
+        gripper = self.gripper
+        if gripper is None or cell is None or location not in self.world.grids:
+            return
+        grid = self.world.grids[location]
+        size, cube = grid.cell_mm, self.world.cube_mm
+        center = (uv[0] * size, uv[1] * size) if uv is not None else ((cell[1] + 0.5) * size, (cell[0] + 0.5) * size)
+        fingers = finger_polygons(center, yaw_deg, "a", opening or gripper.max_open_mm, gripper.finger_mm, cube)
+        for other, stack in sorted(grid.stacks.items()):
+            if other == cell or len(stack) <= level:
+                continue
+            top = stack[-1]
+            neighbor = Footprint(((other[1] + 0.5) * size + top.offset_mm[0], (other[0] + 0.5) * size + top.offset_mm[1]),
+                               top.yaw_deg, cube)
+            if any(convex_overlap(finger, neighbor.corners(), tolerance_mm=0.05) for finger in fingers):
+                text = "{} {}{}: degetul ghearei ({:.0f} mm) atinge cubul de pe {}{}".format(
+                    method, location, cell, opening or gripper.max_open_mm, location, other)
+                self.collisions.append(text)
+                self.world.events.append(text)
 
     # ------------------------------------------------------------------ ArmInterface
     def home(self) -> None:
@@ -198,13 +228,15 @@ class MockArm:
         yaw_deg: float = 0.0,
         level: int = 0,
         uv: Optional[Tuple[float, float]] = None,
+        open_mm: Optional[float] = None,
     ) -> bool:
         location = v.check_location(location)
         cell = v.check_cell(cell)
         args = {"location": location, "cell": cell, "yaw_deg": v.check_yaw(yaw_deg), "level": v.check_level(level),
-                "uv": v.check_uv(uv, cell)}
+                "uv": v.check_uv(uv, cell), "open_mm": v.check_opening(open_mm, "open_mm")}
         self._check_site(location, cell)
         record = self._record("pick", args)
+        self._check_fingers("pick", location, cell, args["level"], args["yaw_deg"], args["uv"], open_mm)
         kind = self._fault("pick")
         if kind in ("comm_error", "calibration"):
             self._raise(record, kind, "pick")
@@ -212,7 +244,8 @@ class MockArm:
             self.last_reason = "punct inaccesibil (simulat)"
             self.position_uncertain = True
             return self._finish(record, 0.05, False)
-        outcome = self.world.pick(location, cell, level, args["yaw_deg"], args["uv"], force_miss=kind == "grasp_fail")
+        outcome = self.world.pick(location, cell, level, args["yaw_deg"], args["uv"], force_miss=kind == "grasp_fail",
+                                  open_mm=args["open_mm"])
         self.current_pose = None
         if outcome == UNREACHABLE:
             self.last_reason = "punct inaccesibil {}{}".format(location, cell or "")
@@ -227,12 +260,16 @@ class MockArm:
             self._raise(record, kind, "pick")
         return True
 
-    def place(self, location: str, cell: Optional[Tuple[int, int]] = None, level: int = 0, yaw_deg: float = 0.0) -> bool:
+    def place(self, location: str, cell: Optional[Tuple[int, int]] = None, level: int = 0, yaw_deg: float = 0.0,
+              release_mm: Optional[float] = None, uv: Optional[Tuple[float, float]] = None) -> bool:
         location = v.check_location(location)
         cell = v.check_cell(cell)
-        args = {"location": location, "cell": cell, "level": v.check_level(level), "yaw_deg": v.check_yaw(yaw_deg)}
+        args = {"location": location, "cell": cell, "level": v.check_level(level), "yaw_deg": v.check_yaw(yaw_deg),
+                "release_mm": v.check_opening(release_mm, "release_mm"), "uv": v.check_uv(uv, cell)}
         self._check_site(location, cell)
         record = self._record("place", args)
+        if self.world.held is not None:
+            self._check_fingers("place", location, cell, args["level"], args["yaw_deg"], args["uv"], release_mm)
         kind = self._fault("place")
         if kind in ("comm_error", "calibration"):
             self._raise(record, kind, "place")
@@ -242,7 +279,7 @@ class MockArm:
             return self._finish(record, 0.05, False)
         if kind == "drop":
             self.world.drop_held_in_transit()
-        outcome = self.world.place(location, cell, level, args["yaw_deg"])
+        outcome = self.world.place(location, cell, level, args["yaw_deg"], args["uv"])
         self.current_pose = None
         if outcome == UNREACHABLE:
             self.last_reason = "punct inaccesibil {}{}".format(location, cell or "")

@@ -75,12 +75,20 @@ class ArmInterface(Protocol):
         yaw_deg: float = 0.0,
         level: int = 0,
         uv: Optional[Tuple[float, float]] = None,
+        open_mm: Optional[float] = None,
     ) -> bool:
-        """Preia cubul: apropiere de sus, coborâre, prindere, ridicare deasupra locului."""
+        """Preia cubul: apropiere de sus, coborâre, prindere, ridicare deasupra locului.
+
+        `open_mm` = deschiderea de abordare (mm, interioară): gheara se pre-închide la ea înainte de deplasare
+        (regula A); None = alege serviciul. Un adaptor care nu poate aplica deschiderea o ignoră."""
         ...
 
-    def place(self, location: str, cell: Optional[Cell] = None, level: int = 0, yaw_deg: float = 0.0) -> bool:
-        """Depune cubul ținut: apropiere, coborâre, eliberare, ridicare deasupra locului."""
+    def place(self, location: str, cell: Optional[Cell] = None, level: int = 0, yaw_deg: float = 0.0,
+              release_mm: Optional[float] = None, uv: Optional[Tuple[float, float]] = None) -> bool:
+        """Depune cubul ținut: apropiere, coborâre, eliberare, ridicare deasupra locului.
+
+        `release_mm` = deschiderea la eliberare (mm, interioară, mică: regula C); None = alege serviciul.
+        `uv` = unde se pune cubul în caroiaj (la stivuire: peste cubul de dedesubt); None = centrul celulei."""
         ...
 
     def read_joints(self) -> List[float]:

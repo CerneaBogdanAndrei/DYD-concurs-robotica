@@ -1,6 +1,13 @@
 // Mișcările brațului, portate din clasa Arm din referinta-python/dofbot.py:
 // pick/place cu apropiere de sus, coborâre în pași aproape verticală și
 // înălțime minimă de tranzit.
+//
+// Gheara printre cuburi (2026-10-29):
+//   A. la pick, gheara se pre-închide la deschiderea de abordare ÎNAINTE de deplasare: nu călătorește și nu
+//      coboară larg deschisă (ar lovi cuburile vecine);
+//   C. la place, se deschide doar cât să elibereze cubul, apoi urcă strict vertical până la înălțimea de
+//      tranzit; abia acolo se poate mișca pe XY sau redeschide gheara.
+// Deschiderile vin de la ArmService (din mm, prin calibrarea ghearei); implicit GRIP_OPEN, ca înainte.
 
 import type { Arm } from "./arm/arm.js";
 import type { Angles6 } from "./arm/protocol.js";
@@ -43,6 +50,9 @@ export class Robot {
   cur: number[] = [...C.HOME, C.GRIP_OPEN];
   /** poziția carteziană curentă (dacă e cunoscută) */
   curXyz: Vec3 | null = null;
+  /** yaw-ul și înclinarea ghearei la ultima mișcare carteziană (pentru ridicarea pe loc) */
+  private curYaw = 0.0;
+  private curPitch = -90;
   private readonly sim: boolean;
   private readonly log: (msg: string) => void;
 
@@ -140,6 +150,8 @@ export class Robot {
     const s5 = wristForYaw(sol.servos[0], yaw);
     await this.write6([...sol.servos, s5, this.grip], tMs);
     this.curXyz = [x, y, z];
+    this.curYaw = yaw;
+    this.curPitch = sol.pitch;
     return sol.pitch;
   }
 
@@ -149,11 +161,20 @@ export class Robot {
   }
 
   /**
-   * Coborâre/ridicare aproape verticală (în FINE_STEPS pași). Înclinarea rămâne
+   * Coborâre/ridicare aproape verticală (în `steps` pași, implicit FINE_STEPS). Înclinarea rămâne
    * cea cerută dacă se poate, altfel cea mai apropiată posibilă.
    */
-  private async line(x: number, y: number, z0: number, z1: number, yaw: number, pitch: number, tMs: number) {
-    const n = Math.max(1, C.FINE_STEPS);
+  private async line(
+    x: number,
+    y: number,
+    z0: number,
+    z1: number,
+    yaw: number,
+    pitch: number,
+    tMs: number,
+    steps: number = C.FINE_STEPS,
+  ) {
+    const n = Math.max(1, steps);
     for (let i = 1; i <= n; i++) {
       const z = z0 + ((z1 - z0) * i) / n;
       await this.goto(x, y, z, yaw, Robot.near(pitch), tMs / n);
@@ -183,23 +204,37 @@ export class Robot {
     if (zT > zHover) await this.line(x, y, zT, zHover, yaw, pitch, C.T_FINE);
   }
 
-  async pick(x: number, y: number, z: number, yaw = 0.0): Promise<void> {
-    const zh = z + C.HOVER_DZ;
-    const p = this.pitchFor(x, y, z, zh);
-    if (this.grip !== C.GRIP_OPEN) await this.gripper(C.GRIP_OPEN);
-    await this.approach(x, y, zh, yaw, p);
-    await this.line(x, y, zh, z, yaw, p, C.T_FINE);
-    await this.gripper(C.GRIP_CLOSED);
-    await this.line(x, y, z, zh, yaw, p, C.T_FINE);
+  /** Ridicare strict verticală, pe loc, până la înălțimea de tranzit (dacă poziția e cunoscută și e mai jos). */
+  private async liftToTransit(): Promise<void> {
+    if (this.curXyz === null) return;
+    const [cx, cy, cz] = this.curXyz;
+    if (cz < C.TRANSIT_MIN_Z) {
+      await this.line(cx, cy, cz, C.TRANSIT_MIN_Z, this.curYaw, this.curPitch, C.T_FINE, C.VERTICAL_STEPS);
+    }
   }
 
-  async place(x: number, y: number, z0: number, yaw = 0.0): Promise<void> {
+  /** `openGrip` = unghiul ghearei la abordare (regula A); implicit GRIP_OPEN (gheara necalibrată în mm). */
+  async pick(x: number, y: number, z: number, yaw = 0.0, openGrip: number = C.GRIP_OPEN): Promise<void> {
+    const zh = z + C.HOVER_DZ;
+    const p = this.pitchFor(x, y, z, zh);
+    // A: gheara își schimbă deschiderea doar sus (deasupra cuburilor), apoi călătorește pre-închisă.
+    await this.liftToTransit();
+    if (this.grip !== openGrip) await this.gripper(openGrip);
+    await this.approach(x, y, zh, yaw, p);
+    await this.line(x, y, zh, z, yaw, p, C.T_FINE, C.VERTICAL_STEPS);
+    await this.gripper(C.GRIP_CLOSED);
+    await this.line(x, y, z, zh, yaw, p, C.T_FINE, C.VERTICAL_STEPS);
+  }
+
+  /** `releaseGrip` = unghiul ghearei la eliberare (regula C); implicit GRIP_OPEN (gheara necalibrată în mm). */
+  async place(x: number, y: number, z0: number, yaw = 0.0, releaseGrip: number = C.GRIP_OPEN): Promise<void> {
     const z = z0 + C.PLACE_GAP;
     const zh = z + C.HOVER_DZ;
     const p = this.pitchFor(x, y, z, zh);
     await this.approach(x, y, zh, yaw, p);
-    await this.line(x, y, zh, z, yaw, p, C.T_FINE);
-    await this.gripper(C.GRIP_OPEN);
-    await this.line(x, y, z, zh, yaw, p, C.T_FINE);
+    await this.line(x, y, zh, z, yaw, p, C.T_FINE, C.VERTICAL_STEPS);
+    // C: deschidere mică, apoi sus pe verticală până la înălțimea de tranzit, fără nicio mișcare pe XY.
+    await this.gripper(releaseGrip);
+    await this.line(x, y, z, Math.max(zh, C.TRANSIT_MIN_Z), yaw, p, C.T_FINE, C.VERTICAL_STEPS);
   }
 }

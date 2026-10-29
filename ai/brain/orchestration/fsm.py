@@ -323,7 +323,7 @@ class TaskRunner:
         pick, place = move.pick, move.place
         self._recover_pose(pick.slot)
         try:
-            ok = self.session.pick(pick.slot.location, _cell(pick.slot), pick.yaw_deg, pick.level, pick.uv)
+            ok = self.session.pick(pick.slot.location, _cell(pick.slot), pick.yaw_deg, pick.level, pick.uv, pick.open_mm)
         except MotionAborted as exc:
             ok = False
             record.detail = "pick oprit de serviciu: {}".format(exc)
@@ -335,7 +335,8 @@ class TaskRunner:
             self._event("unreachable")
             return
         try:
-            ok = self.session.place(place.slot.location, _cell(place.slot), place.level, place.yaw_deg)
+            ok = self.session.place(place.slot.location, _cell(place.slot), place.level, place.yaw_deg, place.release_mm,
+                                    place.uv)
         except MotionAborted as exc:
             ok = False
             record.detail = "place oprit de serviciu: {}".format(exc)
@@ -344,7 +345,7 @@ class TaskRunner:
             self.avoid_targets.add(place.slot)
             self._warn("{} ocolit ca destinație: {}".format(place.slot, record.detail))
             self._recover_pose(pick.slot)
-            if not self.session.place(pick.slot.location, _cell(pick.slot), pick.level, 0.0):  # cubul înapoi
+            if not self.session.place(pick.slot.location, _cell(pick.slot), pick.level, 0.0, place.release_mm):  # înapoi
                 raise ArmCommunicationError("cubul ținut nu poate fi pus nici înapoi pe {}: intervenție manuală".format(pick.slot))
             self._finish_record(record, "unreachable_place")
             self._event("unreachable")

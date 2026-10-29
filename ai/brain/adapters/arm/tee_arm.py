@@ -56,15 +56,16 @@ class TeeArm:
         self.shadow.close_gripper()
 
     def pick(self, location: str, cell: Optional[Tuple[int, int]] = None, yaw_deg: float = 0.0, level: int = 0,
-             uv: Optional[Tuple[float, float]] = None) -> bool:
-        if not self.service.pick(location, cell, yaw_deg=yaw_deg, level=level, uv=uv):
+             uv: Optional[Tuple[float, float]] = None, open_mm: Optional[float] = None) -> bool:
+        if not self.service.pick(location, cell, yaw_deg=yaw_deg, level=level, uv=uv, open_mm=open_mm):
             return False
-        return self.shadow.pick(location, cell, yaw_deg=yaw_deg, level=level, uv=uv)
+        return self.shadow.pick(location, cell, yaw_deg=yaw_deg, level=level, uv=uv, open_mm=open_mm)
 
-    def place(self, location: str, cell: Optional[Tuple[int, int]] = None, level: int = 0, yaw_deg: float = 0.0) -> bool:
-        if not self.service.place(location, cell, level=level, yaw_deg=yaw_deg):
+    def place(self, location: str, cell: Optional[Tuple[int, int]] = None, level: int = 0, yaw_deg: float = 0.0,
+              release_mm: Optional[float] = None, uv: Optional[Tuple[float, float]] = None) -> bool:
+        if not self.service.place(location, cell, level=level, yaw_deg=yaw_deg, release_mm=release_mm, uv=uv):
             return False
-        return self.shadow.place(location, cell, level=level, yaw_deg=yaw_deg)
+        return self.shadow.place(location, cell, level=level, yaw_deg=yaw_deg, release_mm=release_mm, uv=uv)
 
     def read_joints(self) -> List[float]:
         return self.service.read_joints()

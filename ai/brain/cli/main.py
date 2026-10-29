@@ -73,7 +73,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     camera = sub.add_parser("camera", help="camera (previzualizare, captură)").add_subparsers(dest="action", required=True)
     preview = camera.add_parser("preview", help="flux live + analiză adnotată în browser: http://<ip>:<port>/")
-    preview.add_argument("--location", default=None, help="șablonul analizat (implicit medium)")
+    preview.add_argument("--location", default=None, help="șablonul analizat (implicit primul din planning.active_locations)")
     preview.add_argument("--index", type=int, default=0, help="indexul camerei USB")
     preview.add_argument("--width", type=int, default=640)
     preview.add_argument("--height", type=int, default=480)
@@ -81,6 +81,9 @@ def _build_parser() -> argparse.ArgumentParser:
     preview.add_argument("--host", default=None, help="suprascrie preview.host")
     preview.add_argument("--port", type=int, default=None, help="suprascrie preview.port")
     preview.add_argument("--no-analyze", action="store_true", help="doar fluxul live, fără analiză")
+    preview.add_argument("--no-overlay", action="store_true", help="fluxul live fără conturul cuburilor")
+    preview.add_argument("--service-sim", action="store_true",
+                         help="execuția din pagină acceptă serviciul pornit cu --sim (teste; implicit doar brațul real)")
     preview.add_argument("--duration", type=float, default=None, help="oprire după N secunde (implicit: Ctrl+C)")
     capture = camera.add_parser("capture", help="salvează cadre de la camera USB (PNG)")
     capture.add_argument("--index", type=int, default=0)
@@ -256,7 +259,7 @@ def _cmd_vision_analyze(config: AppConfig, args: argparse.Namespace) -> int:
     (out / "observation.json").write_text(
         json.dumps(observation_to_dict(observation), ensure_ascii=False, indent=2), encoding="utf-8"
     )
-    write_image(out / "annotated.jpg", render_annotation(result))
+    write_image(out / "annotated.jpg", render_annotation(result, config.system.gripper))
     log_event(
         logger, "vision_analyze", action="analyze", state="OBSERVE", result="actionable" if observation.actionable else "rejected",
         duration_ms=observation.processing_ms, location=observation.location, reasons=list(observation.reasons),
@@ -290,41 +293,59 @@ def _cmd_camera_preview(config: AppConfig, args: argparse.Namespace) -> int:
     from brain.cli.preview import PreviewSession
     from brain.perception.pipeline import VisionPipeline
 
+    from brain.cli.workbench import Workbench
+    from brain.ports.arm import MODE_HARDWARE, MODE_SIMULATION
+
     settings = config.system.preview
-    location = config.system.location(args.location or _default_location(config)).name
+    location = config.system.location(args.location or config.system.planning.active_locations[0]).name
     if args.frames:
-        source = LoopingFileCamera([str(path) for path in _expand(args.frames)])
+        paths = [str(path) for path in _expand(args.frames)]
+        source = LoopingFileCamera(paths)
+        camera_text = "fișiere ({} cadre, în buclă)".format(len(paths))
     else:
         source = UsbCamera(args.index, args.width, args.height, flush=0, fps=int(round(settings.max_fps)))
+        camera_text = "camera USB {}: {}".format(args.index, source.describe())
     hub = PreviewHub(location)
     host = args.host or settings.host
-    try:
-        server = PreviewServer(hub, host, settings.port if args.port is None else args.port).start()
-    except OSError as exc:
-        raise PerceptionInputError("serverul de previzualizare nu poate porni pe {}:{}: {}".format(
-            host, settings.port if args.port is None else args.port, exc)) from None
     vision = config.system.vision
     session = PreviewSession(
         source, hub, settings,
         pipeline=None if args.no_analyze else VisionPipeline(config.system, config.colors),
         frames_to_aggregate=vision.frames_to_aggregate, min_valid_frames=vision.min_valid_frames,
-        save_dir=Path(settings.save_dir),
-    ).start()
+        save_dir=Path(settings.save_dir), camera_text=camera_text, overlay=not args.no_overlay,
+    )
+    workbench = Workbench(config, hub, session, Path(settings.save_dir),
+                          expected_mode=MODE_SIMULATION if args.service_sim else MODE_HARDWARE)
+    try:
+        server = PreviewServer(hub, host, settings.port if args.port is None else args.port, api=workbench).start()
+    except OSError as exc:
+        raise PerceptionInputError("serverul de previzualizare nu poate porni pe {}:{}: {}".format(
+            host, settings.port if args.port is None else args.port, exc)) from None
+    session.start()
+    workbench.start()
     hosts = local_addresses() if host == "0.0.0.0" else [host]
-    print("Previzualizare {} ({}): {}".format(
-        location, "fișiere" if args.frames else "camera {}: {}".format(args.index, source.describe()),
-        "  ".join("http://{}:{}/".format(h, server.port) for h in hosts)))
+    print("Previzualizare {} ({}): {}".format(location, camera_text,
+                                             "  ".join("http://{}:{}/".format(h, server.port) for h in hosts)))
     print("  imagini: http://<ip>:{0}/snapshot.jpg  http://<ip>:{0}/annotated.jpg ; pe disc: {1}".format(
         server.port, settings.save_dir))
-    print("  oprire: Ctrl+C")
+    if workbench.execute_enabled:
+        print("  EXECUȚIA DIN PAGINĂ E PERMISĂ (preview.allow_execute: true{}). Codul de introdus în pagină: {}".format(
+            ", serviciul în simulare" if args.service_sim else ", doar brațul real", workbench.token))
+    else:
+        print("  execuția din pagină: dezactivată (preview.allow_execute: false)")
+    print("  oprire: Ctrl+C", flush=True)  # și cu ieșirea redirecționată (nohup, jurnal), codul apare imediat
     log_event(logger, "preview_start", action="preview", state="OBSERVE", result="started", location=location, port=server.port)
     started = time.monotonic()
     try:
         while args.duration is None or time.monotonic() - started < args.duration:
             time.sleep(0.2)
     except KeyboardInterrupt:
-        pass
+        if workbench.execution.running:  # ca la `brain run`: oprire după comanda curentă, fără home
+            print("Oprire: se așteaptă terminarea comenzii curente a brațului (fără home)...")
+            workbench.execution.request_stop()
+            workbench.execution.wait(120.0)
     finally:
+        workbench.stop()
         session.stop()
         server.stop()
         release = getattr(source, "release", None)

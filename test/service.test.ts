@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { openSimArm } from "../src/arm/sim-board.js";
-import { CalibError, loadCalib } from "../src/calib.js";
+import { type Calib, CalibError, gripServoForMm, gripTable, loadCalib } from "../src/calib.js";
 import * as C from "../src/config.js";
 import { fk } from "../src/kinematics.js";
 import { Robot } from "../src/robot.js";
@@ -97,6 +97,48 @@ describe("ArmService (ArmInterface peste Robot)", () => {
     await svc.goPose("home", "slow");
     assert.deepEqual(robot.cur.slice(0, 5), C.HOME);
     assert.deepEqual(svc.status().poses, ["home", "observe_source", "observe_dest"]);
+  });
+
+  it("gheara în mm: interpolare între unghiurile măsurate, refuz în afara lor", () => {
+    const calib: Calib = { poses: {}, sites: {}, gripper: [[135, 29], [60, 52], [100, 40]] };
+    assert.equal(gripTable(calib).length, 3);
+    assert.equal(gripServoForMm(calib, 40), 100);
+    assert.ok(Math.abs(gripServoForMm(calib, 46) - 80) < 1e-9);
+    assert.throws(() => gripServoForMm(calib, 55), CalibError);
+    assert.throws(() => gripServoForMm({ poses: {}, sites: {} }, 40), CalibError);
+    // măsurători contradictorii (mai deschis la un unghi mai mare, apoi invers) = necalibrată
+    assert.equal(gripTable({ poses: {}, sites: {}, gripper: [[60, 50], [100, 40], [120, 45]] }).length, 0);
+  });
+
+  it("pick/place cu grip_mm / release_mm: unghiurile din calibrare; fără calibrare, refuz", async () => {
+    const { arm } = openSimArm();
+    const robot = await Robot.create(arm, { sim: true, log: () => {} });
+    const calib: Calib = { ...SIM_CALIB, gripper: [[135, 29], [60, 52]] };
+    const svc = new ArmService(robot, () => calib, true);
+    const grips: number[] = [];
+    const orig = robot.dev.writeServo.bind(robot.dev);
+    robot.dev.writeServo = async (id, a, t) => {
+      grips.push(a);
+      return orig(id, a, t);
+    };
+    assert.deepEqual(await svc.pick({ location: "source", cell: [1, 1], grip_mm: 39 }), { ok: true });
+    const servo39 = Math.trunc(135 + ((60 - 135) * (39 - 29)) / (52 - 29));
+    assert.deepEqual(grips, [servo39, C.GRIP_CLOSED]);
+    assert.deepEqual(await svc.place({ location: "dest", cell: [0, 0], release_mm: 35 }), { ok: true });
+    // la stivuire, uv pune cubul peste cel de dedesubt, nu în centrul celulei
+    assert.deepEqual(await svc.place({ location: "dest", cell: [0, 0], level: 1, uv: [0.75, 0.5] }), { ok: true });
+    assert.ok(Math.abs(svc.resolve("dest", null, 1, 0, [0.75, 0.5]).y - svc.resolve("dest", [0, 0], 1, 0).y) > 5);
+    assert.equal(grips.at(-1), Math.trunc(135 + ((60 - 135) * (35 - 29)) / (52 - 29)));
+    // fără deschidere cerută: cea implicită (cubul + 2 x marja), nu GRIP_OPEN
+    await svc.pick({ location: "source", cell: [0, 0] });
+    assert.ok(!grips.includes(C.GRIP_OPEN));
+    await assert.rejects(svc.pick({ location: "source", cell: [0, 0], grip_mm: C.CUBE_MM }), ArgumentError);
+    const status = svc.status();
+    assert.equal(status.grip_calibrated, true);
+    assert.deepEqual(status.grip_range_mm, [29, 52]);
+    const plain = (await service()).svc;
+    await assert.rejects(plain.pick({ location: "source", cell: [0, 0], grip_mm: 39 }), CalibError);
+    assert.equal(plain.status().grip_calibrated, false);
   });
 
   it("beep(n) sună de n ori", async () => {
