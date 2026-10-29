@@ -262,8 +262,13 @@ class PreviewSession:
         if undistort is not None and items and width_height:
             converted = []
             for item in items:
-                points = undistort.distort_points(np.array(item["poly"], np.float64), width_height[0], width_height[1])
-                converted.append(dict(item, poly=points.tolist()))
+                item = dict(item)
+                for key in ("poly", "label_at"):  # „label_at” = un singur punct (eticheta unei celule)
+                    if item.get(key):
+                        pts = np.array(item[key], np.float64).reshape(-1, 2)
+                        pts = undistort.distort_points(pts, width_height[0], width_height[1]).reshape(-1, 2)
+                        item[key] = pts.tolist() if key == "poly" else pts[0].tolist()
+                converted.append(item)
             items = converted
         with self._lock:
             self._overlay = list(items) if self.overlay_enabled else []

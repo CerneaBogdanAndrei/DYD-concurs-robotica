@@ -42,13 +42,17 @@ export const JOINT_MAX: readonly number[] = [180, 180, 180, 180, 270, 150];
 /** Brațul drept în sus (servo 1..5). */
 export const HOME: readonly number[] = [90, 90, 90, 90, 90];
 
-export const T_MOVE = 900; // ms, mișcări mari
-export const T_FINE = 450; // ms, coborâre / ridicare (împărțită în pași)
+export const T_MOVE = 1200; // ms, mișcări mari (2026-10-29: 900 -> 1200, mai lin)
+export const T_FINE = 900; // ms, coborâre / ridicare (împărțită în pași legați, fără opriri între ei)
 export const T_GRIP = 400; // ms, închidere / deschidere gheară
 export const FINE_STEPS = 3; // în câți pași se face coborârea „pe verticală”
 // Lângă cuburi (coborârea la prindere, ridicarea după eliberare): mai mulți pași = mai aproape de verticală.
 export const VERTICAL_STEPS = 6;
 export const SETTLE_S = 0.6; // s, așteptare după ce brațul ajunge în poza de observare
+// După o comandă, înainte de următoarea: brațul se liniștește. Pașii unei coborâri/ridicări merg legați (0 ms),
+// iar la capătul lor brațul stă SETTLE_MS înainte ca gheara să strângă sau să elibereze (2026-10-29: tremura).
+export const PAUSE_MS = 120;
+export const SETTLE_MS = 350;
 
 // Înclinarea ghearei încercată la IK (în ordine): -90 = vertical, 0 = orizontal.
 // Se preferă verticala; pentru puncte înalte/depărtate brațul înclină gheara.
@@ -58,7 +62,7 @@ export const PITCH_CANDIDATES: readonly number[] = Array.from({ length: 19 }, (_
 export const CUBE_MM = 29.0; // latura cubului, măsurată de echipă 2026-10-29 (regulamentul: 30 mm nominal)
 export const HOVER_DZ = 45.0; // cât de sus deasupra punctului de prindere se face apropierea
 export const PLACE_GAP = 3.0; // cubul e eliberat cu atâția mm mai sus decât poziția teoretică
-export const GRASP_DZ = 0.0; // corecție fină a înălțimii de prindere (+ = mai sus)
+export const GRASP_DZ = 3.0; // corecție fină a înălțimii de prindere (+ = mai sus); 3 mm: degetele departe de foaie
 export const TRANSIT_MIN_Z = 70.0; // înălțimea minimă a ghearei la deplasări laterale
 
 // ---------------------------------------------------------------- CULORI

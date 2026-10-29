@@ -89,19 +89,20 @@ export class ArmService {
     const site = requireSite(this.calib(), location);
     if (site.kind === "grid") {
       const g = gridOf(site);
-      let xy;
+      let u, v;
       if (uv !== undefined && uv !== null) {
         const ok = Array.isArray(uv) && uv.length === 2 && uv.every((v) => typeof v === "number" && v >= 0 && v <= 3);
         if (!ok) throw new ArgumentError(`uv invalid: ${JSON.stringify(uv)} (trebuie [u, v] în 0..3)`);
-        xy = g.uvToXy(uv[0] as number, uv[1] as number);
+        [u, v] = uv as [number, number];
       } else {
         if (cell === undefined || cell === null) {
           throw new ArgumentError(`'${location}' e un caroiaj: cell e obligatoriu`);
         }
         const [r, c] = checkCell(cell);
-        xy = g.cellXy(r, c);
+        [u, v] = [c + 0.5, r + 0.5];
       }
-      return { x: xy[0], y: xy[1], z: g.z + level * C.CUBE_MM, yaw: g.yawRobot(yawDeg) };
+      const xy = g.uvToXy(u, v);
+      return { x: xy[0], y: xy[1], z: g.zAt(u, v) + level * C.CUBE_MM, yaw: g.yawRobot(yawDeg) };
     }
     if (cell !== undefined && cell !== null) {
       throw new ArgumentError(`'${location}' e o zonă (un singur punct): cell trebuie să lipsească`);

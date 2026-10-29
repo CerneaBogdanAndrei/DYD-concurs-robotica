@@ -11,6 +11,7 @@ peste modelul învățat al caroiajului (care mergea fizic la nivelul 0), iar im
     ai/.venv/bin/python ai/scripts/calib_live/autocal/mutare_foaie.py            # doar măsoară
     ai/.venv/bin/python ai/scripts/calib_live/autocal/mutare_foaie.py --aplica   # + scrie calib.json și noua referință
     ai/.venv/bin/python ai/scripts/calib_live/autocal/mutare_foaie.py --ref-nou  # după o calibrare cu mâna: doar referința
+    ... --cu-cuburi   # cuburi pe foaie: se folosesc doar intersecțiile care nu ating celulele ocupate (minimum 8)
 
 Precizia: ~2 mm cu aceleași unghiuri citite ca la referință; 1 grd diferență = ~10 px = 3-7 mm. Mutări mari (> ~1 celulă) sau rotiri mari
 cer recalibrarea cu mâna (`npm run calib -- celule small`): modelul învățat ar fi extrapolat prea departe.
@@ -49,7 +50,13 @@ def post(service, method, body=None):
     return json.load(urllib.request.urlopen(req, timeout=30))["result"]
 
 
-def capture(service, preview):
+def free_points(obs):
+    """Intersecțiile (16, rând cu rând) care nu ating o celulă ocupată sau nesigură: liniile de lângă un cub deviază."""
+    busy = {(c["row"], c["col"]) for c in obs["cells"] if c["occupancy"] != "empty"}
+    return np.array([not any((r, c) in busy for r in (j - 1, j) for c in (i - 1, i)) for j in range(4) for i in range(4)])
+
+
+def capture(service, preview, cubes=False):
     post(service, "go_pose", {"name": "home"})
     post(service, "go_pose", {"name": "observe_small", "speed": "slow"})
     time.sleep(1.0)
@@ -68,7 +75,7 @@ def capture(service, preview):
     jpg = urllib.request.urlopen(f"{preview}/snapshot.jpg", timeout=10).read()
     img = cv2.imdecode(np.frombuffer(jpg, np.uint8), 1)
     pts, rms = intersections(img, obs["geometry"]["corners_px"])
-    if rms > 1.0:
+    if rms > (4.0 if cubes else 1.0):
         sys.exit(f"Liniile caroiajului nu sunt clare (abatere {rms:.2f} px): scoateți cuburile de pe foaie.")
     obs["read_joints"] = joints
     return img, obs, pts.reshape(-1, 2)
@@ -78,11 +85,12 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--aplica", action="store_true", help="scrie calib.json și imaginea de acum ca referință")
     ap.add_argument("--ref-nou", action="store_true", help="salvează imaginea de acum ca referință (după `npm run calib -- celule small`)")
+    ap.add_argument("--cu-cuburi", action="store_true", help="ignoră intersecțiile din jurul celulelor ocupate")
     ap.add_argument("--preview", default="http://127.0.0.1:8080")
     ap.add_argument("--service", default="http://127.0.0.1:8765")
     a = ap.parse_args()
     ref_img, ref_json = HERE / "ref/observe_small.jpg", HERE / "ref/observe_small.json"
-    img, obs, now = capture(a.service, a.preview)
+    img, obs, now = capture(a.service, a.preview, a.cu_cuburi)
     if a.ref_nou:
         for src in (ref_img, ref_json):
             if src.exists():
@@ -96,15 +104,22 @@ def main():
         print(f"ATENȚIE: unghiuri citite {obs['read_joints']}, la referință {ref_obs.get('read_joints')}: "
               "rezultatul poate avea câțiva mm eroare.")
     ref, _ = intersections(cv2.imread(str(ref_img)), ref_obs["geometry"]["corners_px"])
-    H_ref, _ = cv2.findHomography(GRID, undist(ref.reshape(-1, 2)), 0)
-    X = cv2.perspectiveTransform(undist(now).reshape(-1, 1, 2), np.linalg.inv(H_ref)).reshape(-1, 2)
-    mc, xc = GRID.mean(0), X.mean(0)
-    U, _, Vt = np.linalg.svd((GRID - mc).T @ (X - xc))
+    use_ref = free_points(ref_obs) if a.cu_cuburi and "cells" in ref_obs else np.ones(16, bool)
+    use = use_ref & (free_points(obs) if a.cu_cuburi else True)
+    if a.cu_cuburi:
+        print(f"Cu cuburi pe foaie: {use.sum()} intersecții din 16, departe de celulele ocupate.")
+        if use.sum() < 8:
+            sys.exit("Prea puține intersecții libere: scoateți cuburile de pe foaie.")
+    H_ref, _ = cv2.findHomography(GRID[use_ref], undist(ref.reshape(-1, 2))[use_ref], 0)
+    X = cv2.perspectiveTransform(undist(now).reshape(-1, 1, 2), np.linalg.inv(H_ref)).reshape(-1, 2)[use]
+    G = GRID[use]
+    mc, xc = G.mean(0), X.mean(0)
+    U, _, Vt = np.linalg.svd((G - mc).T @ (X - xc))
     R = (U @ Vt).T
     if np.linalg.det(R) < 0:
         R = R @ np.diag([1, -1])
     t = xc - R @ mc
-    res = np.linalg.norm(GRID @ R.T + t - X, axis=1)
+    res = np.linalg.norm(G @ R.T + t - X, axis=1)
     rot = np.degrees(np.arctan2(R[1, 0], R[0, 0]))
     print(f"Foaia s-a mutat cu {t[0]:+.1f} mm pe coloane (+ = spre c2), {t[1]:+.1f} mm pe linii (+ = spre robot), "
           f"rotire {rot:+.2f} grd; abatere RMS {np.sqrt((res ** 2).mean()):.1f} mm, max {res.max():.1f} mm")
@@ -116,7 +131,7 @@ def main():
         print("Nimic scris (rulați cu --aplica).")
         return
     shift = HERE / "ultima_mutare.json"
-    json.dump({"R": R.tolist(), "t": t.tolist()}, open(shift, "w"))
+    json.dump({"R": R.tolist(), "t": t.tolist(), "col": COL, "row": ROW}, open(shift, "w"))
     subprocess.run(["node", str(HERE / "aplica_mutarea.mjs"), str(shift)], cwd=ROOT, check=True)
     shutil.copy(ref_img, HERE / "ref/observe_small.prev.jpg")
     shutil.copy(ref_json, HERE / "ref/observe_small.prev.json")

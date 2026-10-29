@@ -38,7 +38,7 @@ describe("ArmService (ArmInterface peste Robot)", () => {
   it("pick pe celulă coboară la centrul ei, la z-ul caroiajului", async () => {
     const { svc, robot } = await service();
     const t = svc.resolve("source", [1, 1], 0, 0);
-    assert.ok(Math.abs(t.x - 180) < 1e-9 && Math.abs(t.y - 100) < 1e-9 && Math.abs(t.z - 15) < 1e-9);
+    assert.ok(Math.abs(t.x - 180) < 1e-9 && Math.abs(t.y - 100) < 1e-9 && Math.abs(t.z - 15 - C.GRASP_DZ) < 1e-9);
     const seen: number[][] = [];
     const orig = robot.dev.writeAll.bind(robot.dev);
     robot.dev.writeAll = async (a, ms) => {
@@ -48,13 +48,13 @@ describe("ArmService (ArmInterface peste Robot)", () => {
     await svc.pick({ location: "source", cell: [1, 1] });
     const low = seen.reduce((best, s) => (fk(s).z < fk(best).z ? s : best));
     const p = fk(low);
-    assert.ok(Math.hypot(p.x - 180, p.y - 100) < 5 && Math.abs(p.z - 15) < 5, JSON.stringify(p));
+    assert.ok(Math.hypot(p.x - 180, p.y - 100) < 5 && Math.abs(p.z - 15 - C.GRASP_DZ) < 5, JSON.stringify(p));
     assert.equal(robot.grip, C.GRIP_CLOSED);
   });
 
   it("level urcă cu latura cubului; uv precizează poziția în celulă", async () => {
     const { svc } = await service();
-    assert.equal(svc.resolve("source", [0, 0], 2, 0).z, 15 + 2 * C.CUBE_MM);
+    assert.equal(svc.resolve("source", [0, 0], 2, 0).z, 15 + C.GRASP_DZ + 2 * C.CUBE_MM);
     const a = svc.resolve("source", [0, 0], 0, 0, [0.5, 0.5]);
     const b = svc.resolve("source", null, 0, 0, [0.75, 0.5]);
     assert.ok(Math.abs(a.y - 60) < 1e-9 && Math.abs(b.y - 70) < 1e-9); // un sfert de celulă = 10 mm
@@ -62,7 +62,7 @@ describe("ArmService (ArmInterface peste Robot)", () => {
 
   it("zona are un singur punct; yaw e în sistemul robotului", async () => {
     const { svc } = await service();
-    assert.deepEqual(svc.resolve("zone_red", null, 1, 30), { x: 265, y: 0, z: 15 + C.CUBE_MM, yaw: 30 });
+    assert.deepEqual(svc.resolve("zone_red", null, 1, 30), { x: 265, y: 0, z: 15 + C.GRASP_DZ + C.CUBE_MM, yaw: 30 });
     assert.throws(() => svc.resolve("zone_red", [0, 0], 0, 0), ArgumentError);
   });
 

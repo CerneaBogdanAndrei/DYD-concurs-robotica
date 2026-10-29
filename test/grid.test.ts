@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import * as C from "../src/config.js";
 import { Grid, cellLabel, parseCellLabel, type Vec3 } from "../src/grid.js";
 
 const close = (a: number, b: number, eps = 1e-6) => assert.ok(Math.abs(a - b) <= eps, `${a} vs ${b}`);
@@ -49,7 +50,7 @@ describe("caroiaj", () => {
       }
     }
     residuals.forEach((res) => close(res.errMm, 0));
-    close(grid.z, 15);
+    close(grid.z, 15 + C.GRASP_DZ);
     assert.match(grid.info(), /pas coloane 45\.0 mm, pas linii 45\.0 mm, unghi între axe 90\.0 grd/);
   });
 
@@ -60,6 +61,22 @@ describe("caroiaj", () => {
     const [ex, ey] = ref.cellXy(1, 1);
     assert.ok(Math.hypot(x - ex, y - ey) < 1, "centrul trebuie să rămână sub 1 mm");
     assert.ok(residuals.every((r) => r.errMm < 3));
+  });
+
+  it("înălțimea de prindere urmează planul colțurilor, nu media lor", () => {
+    const pts = taught(["r0c0", "r0c2", "r2c0", "r2c2"]);
+    // ca pe brațul real (2026-10-29): același z fizic, dar modelul dă 9,7 / 4,3 / 14,1 / 8,7 mm
+    pts["r0c0"]![2] = 9.7;
+    pts["r0c2"]![2] = 4.3;
+    pts["r2c0"]![2] = 14.1;
+    pts["r2c2"]![2] = 8.7;
+    const { grid } = Grid.fromPoints(pts);
+    const dz = C.GRASP_DZ;
+    close(grid.zAt(0.5, 0.5), 9.7 + dz);
+    close(grid.zAt(2.5, 0.5), 4.3 + dz);
+    close(grid.zAt(0.5, 2.5), 14.1 + dz);
+    close(grid.zAt(2.5, 2.5), 8.7 + dz);
+    close(grid.z, (9.7 + 4.3 + 14.1 + 8.7) / 4 + dz);
   });
 
   it("respinge celule coliniare sau prea puține", () => {

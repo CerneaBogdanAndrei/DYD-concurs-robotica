@@ -117,7 +117,7 @@ async function cmdTest(robot: Robot, calib: Calib, loc: string, rc: string[]) {
     const [r, c] = parseCellLabel(`r${rc[0]}c${rc[1]}`);
     const g = gridOf(site);
     [x, y] = g.cellXy(r, c);
-    z = g.z;
+    z = g.zAt(c + 0.5, r + 0.5);
     yaw = g.yawRobot(0);
     console.log(`r${r}c${c}: x=${f1(x)} y=${f1(y)} z=${f1(z)}`);
   } else {

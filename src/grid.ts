@@ -61,8 +61,10 @@ export class Grid {
     readonly ecol: Vec2,
     /** deplasarea de la o linie la următoarea */
     readonly erow: Vec2,
-    /** înălțimea de prindere a unui cub de pe masă */
+    /** înălțimea de prindere a unui cub de pe masă, în centrul caroiajului (u = v = 1,5) */
     readonly z: number,
+    /** cât crește înălțimea de prindere de la o coloană la următoarea, respectiv de la o linie la următoarea */
+    readonly dz: Vec2 = [0, 0],
   ) {}
 
   /** pts: { r0c0: [x, y, z], ... } (minim 3 celule necoliniare). */
@@ -83,8 +85,14 @@ export class Grid {
     if (!sx || !sy) {
       throw new Error("trebuie cel puțin 3 celule necoliniare (ex. r0c0, r0c2, r2c0)");
     }
-    const zMean = Z.reduce((s, v) => s + v, 0) / Z.length;
-    const grid = new Grid([sx[0]!, sy[0]!], [sx[1]!, sy[1]!], [sx[2]!, sy[2]!], zMean + C.GRASP_DZ);
+    // Înălțimea: planul prin punctele învățate, nu media lor. Gheara e învățată la aceeași înălțime fizică pe
+    // fiecare colț, dar modelul brațului le dă la z diferite (2026-10-29: 4..14 mm); cu media, gheara cobora
+    // cu ~5 mm prea jos pe un colț și prea sus pe cel opus.
+    const sz = leastSquares3(A, Z)!;
+    const grid = new Grid([sx[0]!, sy[0]!], [sx[1]!, sy[1]!], [sx[2]!, sy[2]!], sz[0]! + sz[1]! + sz[2]! + C.GRASP_DZ, [
+      sz[1]!,
+      sz[2]!,
+    ]);
     const residuals = Object.entries(pts).map(([label, p]) => {
       const [r, c] = parseCellLabel(label);
       const q = grid.cellXy(r, c);
@@ -104,6 +112,11 @@ export class Grid {
     return this.uvToXy(c + 0.5, r + 0.5);
   }
 
+  /** Înălțimea de prindere în punctul (u, v), după planul punctelor învățate. */
+  zAt(u: number, v: number): number {
+    return this.z + (u - 1.5) * this.dz[0] + (v - 1.5) * this.dz[1];
+  }
+
   /** Unghi măsurat în imaginea rectificată (față de axa coloanelor) -> unghi robot. */
   yawRobot(yawImgDeg: number): number {
     const a = (yawImgDeg * Math.PI) / 180;
@@ -117,9 +130,11 @@ export class Grid {
     const pr = Math.hypot(...this.erow);
     const cos = (this.ecol[0] * this.erow[0] + this.ecol[1] * this.erow[1]) / (pc * pr);
     const ang = (Math.acos(Math.max(-1, Math.min(1, cos))) * 180) / Math.PI;
+    const corners = [this.zAt(0.5, 0.5), this.zAt(2.5, 0.5), this.zAt(0.5, 2.5), this.zAt(2.5, 2.5)];
     return (
       `pas coloane ${pc.toFixed(1)} mm, pas linii ${pr.toFixed(1)} mm, ` +
-      `unghi între axe ${ang.toFixed(1)} grd, z prindere ${this.z.toFixed(1)} mm`
+      `unghi între axe ${ang.toFixed(1)} grd, z prindere ${this.z.toFixed(1)} mm ` +
+      `(colțuri ${Math.min(...corners).toFixed(1)}..${Math.max(...corners).toFixed(1)})`
     );
   }
 }

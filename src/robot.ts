@@ -74,12 +74,13 @@ export class Robot {
   }
 
   // --- nivel jos
-  async write6(s: readonly number[], tMs: number): Promise<void> {
+  /** `pauseMs` = așteptarea după mișcare (0 = următoarea comandă o continuă, fără oprire). */
+  async write6(s: readonly number[], tMs: number, pauseMs: number = C.PAUSE_MS): Promise<void> {
     const v = s.map(roundHalfEven);
     checkJointLimits(v);
     if (this.sim) this.log(`   [sim] servo [${v.join(", ")}] în ${Math.trunc(tMs)} ms`);
     await this.dev.writeAll(v as unknown as Angles6, Math.trunc(tMs));
-    await this.wait(tMs + 120);
+    await this.wait(tMs + pauseMs);
     this.cur = v;
   }
 
@@ -142,13 +143,14 @@ export class Robot {
     yaw = 0.0,
     pitches: readonly number[] | null = null,
     tMs: number = C.T_MOVE,
+    pauseMs: number = C.PAUSE_MS,
   ): Promise<number> {
     const sol = ik(x, y, z, pitches);
     if (sol === null) {
       throw new Unreachable(`punct inaccesibil x=${x.toFixed(0)} y=${y.toFixed(0)} z=${z.toFixed(0)}`);
     }
     const s5 = wristForYaw(sol.servos[0], yaw);
-    await this.write6([...sol.servos, s5, this.grip], tMs);
+    await this.write6([...sol.servos, s5, this.grip], tMs, pauseMs);
     this.curXyz = [x, y, z];
     this.curYaw = yaw;
     this.curPitch = sol.pitch;
@@ -162,7 +164,8 @@ export class Robot {
 
   /**
    * Coborâre/ridicare aproape verticală (în `steps` pași, implicit FINE_STEPS). Înclinarea rămâne
-   * cea cerută dacă se poate, altfel cea mai apropiată posibilă.
+   * cea cerută dacă se poate, altfel cea mai apropiată posibilă. Pașii merg legați (fără oprire între ei),
+   * iar la capăt brațul stă SETTLE_MS: o mișcare continuă, fără smucituri.
    */
   private async line(
     x: number,
@@ -177,7 +180,7 @@ export class Robot {
     const n = Math.max(1, steps);
     for (let i = 1; i <= n; i++) {
       const z = z0 + ((z1 - z0) * i) / n;
-      await this.goto(x, y, z, yaw, Robot.near(pitch), tMs / n);
+      await this.goto(x, y, z, yaw, Robot.near(pitch), tMs / n, i < n ? 0 : C.SETTLE_MS);
     }
   }
 

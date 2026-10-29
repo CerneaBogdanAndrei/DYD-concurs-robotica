@@ -1,5 +1,8 @@
 """Imaginea adnotată pentru verificare vizuală (text ASCII: `cv2.putText` nu suportă diacritice).
 
+Liniile caroiajului, măsurate sub-pixel (`grid_measure`), sunt desenate cu albastru deschis, iar pe fiecare celulă
+scrie lățimea x înălțimea ei în mm (față de conturul exterior de 3 x latura celulei).
+
 Pe lângă culoare și yaw, fiecare cub are latura măsurată (mm) și spațiul liber până la vecini, pe axele lui:
 verde = degetul ghearei încape (`GripperGeometry.side_space_mm`), roșu = nu încape. Pe cadrul camerei, conturul
 cubului are culoarea stării prinderii: verde = pe centru, galben = cu offset, portocaliu = degetele încap pe o
@@ -17,6 +20,7 @@ import numpy as np
 from brain.domain.cube import Color, Occupancy, TopFace
 from brain.domain.grasp import GAP_METRIC_KEYS, Footprint, GripperGeometry, clearances_from_metrics, plan_grasp
 from brain.perception.geometry import transform_points
+from brain.perception.grid_measure import cell_sizes_mm, measure_lines
 from brain.perception.pipeline import VisionResult
 
 _COLOR_BGR = {
@@ -32,6 +36,7 @@ _OK = (60, 180, 60)
 _BAD = (40, 40, 220)
 _GRASP_BGR = {"centered": (60, 200, 60), "offset": (0, 210, 230), "risky": (0, 140, 255), "blocked": (40, 40, 230)}
 _NEUTRAL = (230, 230, 230)
+_LINES = (255, 200, 0)
 _FONT = cv2.FONT_HERSHEY_SIMPLEX
 
 
@@ -103,6 +108,34 @@ def _draw_gaps(image: np.ndarray, result: VisionResult, index: int, box: np.ndar
         _text(image, "{:.0f}".format(gap), (int(label[0]), int(label[1])), 0.33, color)
 
 
+def grid_items(result: VisionResult) -> List[Dict[str, Any]]:
+    """Liniile caroiajului măsurate în cadrul analizat și dimensiunile celulelor în mm (etichetă jos în celulă)."""
+    obs = result.observation
+    if result.aggregated is None or not obs.geometry.corners_px or result.px_per_mm is None or result.rectified is None:
+        return []
+    try:
+        points = measure_lines(result.aggregated, obs.geometry.corners_px)["points"]
+    except Exception:  # noqa: BLE001 - măsurătoarea e doar informativă: nu oprește analiza
+        return []
+    items: List[Dict[str, Any]] = []
+    for k in range(4):
+        for line in ([points[j][k] for j in range(4)], [points[k][i] for i in range(4)]):
+            if all(p is not None for p in line):
+                items.append({"poly": [[round(x, 1), round(y, 1)] for x, y in line], "color": list(_LINES),
+                              "label": "", "closed": False, "thickness": 1})
+    cell_px = (result.rectified.shape[1] - 2 * result.rectified_margin) // obs.cols
+    sizes = cell_sizes_mm(points, cell_px / result.px_per_mm)
+    for r in range(3):
+        for c in range(3):
+            if sizes is None or sizes[r][c] is None:
+                continue
+            q = np.array([points[r][c], points[r][c + 1], points[r + 1][c + 1], points[r + 1][c]], dtype=np.float64)
+            at = q[[2, 3]].mean(axis=0) * 0.8 + q.mean(axis=0) * 0.2  # spre latura de jos
+            items.append({"poly": [], "color": list(_LINES), "label": "{:.1f}x{:.1f}".format(*sizes[r][c]),
+                          "label_at": [round(float(at[0]) - 26, 1), round(float(at[1]) - 4, 1)]})
+    return items
+
+
 def overlay_items(result: VisionResult, gripper: Optional[GripperGeometry] = None) -> List[Dict[str, Any]]:
     """Conturul fiecărui cub în cadrul camerei, cu eticheta (cod, laturile, cel mai mic spațiu), desenat și peste
     fluxul live până la analiza următoare. Coordonatele sunt ale cadrului analizat (îndreptat, dacă există
@@ -111,7 +144,7 @@ def overlay_items(result: VisionResult, gripper: Optional[GripperGeometry] = Non
     if not obs.actionable or result.rectified is None or result.homography is None:
         return []
     size = float(result.rectified.shape[0])
-    items = []
+    items = grid_items(result)
     for index, cell_result in enumerate(result.cell_results):
         cell = obs.cells[index]
         if cell_result.box is None or cell.occupancy is not Occupancy.OCCUPIED:
@@ -132,12 +165,18 @@ def overlay_items(result: VisionResult, gripper: Optional[GripperGeometry] = Non
 def draw_overlay(image: np.ndarray, items: Sequence[Dict[str, Any]]) -> None:
     """Desenează `overlay_items` pe un cadru (pe loc)."""
     for item in items:
-        pts = np.rint(np.array(item["poly"], dtype=np.float64)).astype(np.int32).reshape(-1, 1, 2)
         color = tuple(int(c) for c in item["color"])
-        cv2.polylines(image, [pts], True, color, 2, cv2.LINE_AA)
-        flat = pts.reshape(-1, 2)
-        if item["label"]:
-            _text(image, str(item["label"]), (int(flat[:, 0].mean()) - 20, int(flat[:, 1].min()) - 5), 0.35, color)
+        if item["poly"]:
+            pts = np.rint(np.array(item["poly"], dtype=np.float64)).astype(np.int32).reshape(-1, 1, 2)
+            cv2.polylines(image, [pts], item.get("closed", True), color, int(item.get("thickness", 2)), cv2.LINE_AA)
+        if not item["label"]:
+            continue
+        if "label_at" in item:
+            org = (int(item["label_at"][0]), int(item["label_at"][1]))
+        else:
+            flat = np.rint(np.array(item["poly"], dtype=np.float64)).reshape(-1, 2)
+            org = (int(flat[:, 0].mean()) - 20, int(flat[:, 1].min()) - 5)
+        _text(image, str(item["label"]), org, 0.35, color)
 
 
 def render_annotation(result: VisionResult, gripper: Optional[GripperGeometry] = None) -> np.ndarray:
