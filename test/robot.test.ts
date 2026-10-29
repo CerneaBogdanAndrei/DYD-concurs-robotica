@@ -1,0 +1,104 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import { openSimArm } from "../src/arm/sim-board.js";
+import * as C from "../src/config.js";
+import { fk, Unreachable } from "../src/kinematics.js";
+import { JointLimitError, Robot, roundHalfEven } from "../src/robot.js";
+
+/** Robot simulat care ține minte fiecare comandă trimisă. */
+async function recorded() {
+  const { arm } = openSimArm();
+  const events: ({ kind: "move"; s: number[]; t: number } | { kind: "grip"; v: number })[] = [];
+  const origAll = arm.writeAll.bind(arm);
+  arm.writeAll = async (a, t) => {
+    events.push({ kind: "move", s: [...a], t });
+    return origAll(a, t);
+  };
+  const origOne = arm.writeServo.bind(arm);
+  arm.writeServo = async (id, a, t) => {
+    events.push({ kind: "grip", v: a });
+    return origOne(id, a, t);
+  };
+  const robot = await Robot.create(arm, { sim: true, log: () => {} });
+  return { robot, events };
+}
+
+// Unghiurile se rotunjesc la grade întregi (int(round()) din referință): ~1° pe L4 = 175 mm ≈ 3 mm.
+const TOL = 5;
+
+const moves = (ev: Awaited<ReturnType<typeof recorded>>["events"]) =>
+  ev.flatMap((e) => (e.kind === "move" ? [{ ...fk(e.s), s: e.s, t: e.t }] : []));
+
+describe("Robot (mișcări portate din dofbot.py)", () => {
+  it("round() ca în Python", () => {
+    assert.deepEqual([0.5, 1.5, 2.5, 3.5, 2.4, 2.6, 89.5].map(roundHalfEven), [0, 2, 2, 4, 2, 3, 90]);
+  });
+
+  it("pick: apropiere sus, coborâre în FINE_STEPS pași, strânge, ridică", async () => {
+    const { robot, events } = await recorded();
+    robot.grip = 0; // gheara nu e deschisă -> pick o deschide întâi
+    await robot.pick(200, 40, 15, 10);
+    assert.deepEqual(events[0], { kind: "grip", v: C.GRIP_OPEN });
+    const closeAt = events.findIndex((e) => e.kind === "grip" && e.v === C.GRIP_CLOSED);
+    assert.ok(closeAt > 0);
+    const before = moves(events.slice(0, closeAt));
+    const after = moves(events.slice(closeAt));
+    // tranzit la max(HOVER, TRANSIT_MIN_Z) deasupra punctului de prindere
+    const zh = 15 + C.HOVER_DZ;
+    assert.ok(Math.abs(before[0]!.z - Math.max(zh, C.TRANSIT_MIN_Z)) < TOL);
+    // coborârea finală are FINE_STEPS pași pe aceeași verticală și se termină la z
+    const descent = before.slice(-C.FINE_STEPS);
+    for (const p of descent) {
+      assert.ok(Math.hypot(p.x - 200, p.y - 40) < TOL, `deviere laterală la z=${p.z}`);
+      assert.equal(p.t, Math.trunc(C.T_FINE / C.FINE_STEPS));
+    }
+    assert.ok(Math.abs(descent.at(-1)!.z - 15) < TOL);
+    assert.equal(after.length, C.FINE_STEPS);
+    assert.ok(Math.abs(after.at(-1)!.z - zh) < TOL);
+  });
+
+  it("între două locuri nu se deplasează lateral sub TRANSIT_MIN_Z", async () => {
+    const { robot, events } = await recorded();
+    await robot.pick(200, 80, 15);
+    await robot.place(180, -90, 15 + 2 * C.CUBE_MM);
+    await robot.pick(240, -20, 15);
+    const m = moves(events);
+    for (let i = 1; i < m.length; i++) {
+      const lateral = Math.hypot(m[i]!.x - m[i - 1]!.x, m[i]!.y - m[i - 1]!.y);
+      if (lateral > 5) {
+        assert.ok(m[i - 1]!.z >= C.TRANSIT_MIN_Z - TOL && m[i]!.z >= C.TRANSIT_MIN_Z - TOL,
+          `deplasare laterală de ${lateral.toFixed(0)} mm la z=${m[i - 1]!.z.toFixed(0)}->${m[i]!.z.toFixed(0)}`);
+      }
+    }
+  });
+
+  it("place: eliberează la z + PLACE_GAP și urcă înapoi", async () => {
+    const { robot, events } = await recorded();
+    await robot.place(200, 0, 45);
+    const openAt = events.findIndex((e) => e.kind === "grip" && e.v === C.GRIP_OPEN);
+    const low = moves(events.slice(0, openAt)).at(-1)!;
+    assert.ok(Math.abs(low.z - (45 + C.PLACE_GAP)) < TOL);
+    assert.equal(robot.grip, C.GRIP_OPEN);
+  });
+
+  it("punct inaccesibil: Unreachable înainte de orice mișcare", async () => {
+    const { robot, events } = await recorded();
+    await assert.rejects(robot.pick(500, 0, 15), Unreachable);
+    assert.equal(events.length, 0);
+  });
+
+  it("refuză comenzi în afara limitelor", async () => {
+    const { robot } = await recorded();
+    await assert.rejects(robot.write6([90, 90, 90, 90, 90, 170], 100), JointLimitError);
+    await assert.rejects(robot.write6([90, 90, 90, 90, 90], 100), JointLimitError);
+    await assert.rejects(robot.gripper(160), JointLimitError);
+  });
+
+  it("anunță evenimentele ghearei cu poziția curentă", async () => {
+    const { arm } = openSimArm();
+    const seen: [number, number | undefined][] = [];
+    const robot = await Robot.create(arm, { sim: true, log: () => {}, onGripper: (v, at) => seen.push([v, at?.[2]]) });
+    await robot.pick(200, 0, 15);
+    assert.deepEqual(seen, [[C.GRIP_CLOSED, 15]]);
+  });
+});

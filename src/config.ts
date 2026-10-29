@@ -22,6 +22,13 @@ export const J5_MAX = 180;
 export const GRIP_OPEN = 60; // (!) gheara deschisă (puțin mai largă decât cubul)
 export const GRIP_CLOSED = 135; // (!) gheara strânsă pe cub (nu forțați servo-ul peste 150)
 
+/**
+ * Limite de siguranță per servo (1..6), verificate la fiecare comandă.
+ * O comandă în afara lor e refuzată, nu tăiată. Gheara: max 150 (vezi GRIP_CLOSED).
+ */
+export const JOINT_MIN: readonly number[] = [0, 0, 0, 0, 0, 0];
+export const JOINT_MAX: readonly number[] = [180, 180, 180, 180, 270, 150];
+
 /** Brațul drept în sus (servo 1..5). */
 export const HOME: readonly number[] = [90, 90, 90, 90, 90];
 
