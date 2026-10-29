@@ -55,7 +55,7 @@ export const SETTLE_S = 0.6; // s, așteptare după ce brațul ajunge în poza d
 export const PITCH_CANDIDATES: readonly number[] = Array.from({ length: 19 }, (_, i) => -90 + 5 * i);
 
 // ---------------------------------------------------------------- CUBURI
-export const CUBE_MM = 29.0; // latura cubului, măsurată de echipă 2026-10-29 (regulamentul: 30 mm nominal)
+export const CUBE_MM = 40.0; // latura cubului de probă (2026-10-29 seara: echipa lucrează cu cuburi de 40 mm; cele vechi aveau 29)
 export const HOVER_DZ = 45.0; // cât de sus deasupra punctului de prindere se face apropierea
 export const PLACE_GAP = 3.0; // cubul e eliberat cu atâția mm mai sus decât poziția teoretică
 export const GRASP_DZ = 0.0; // corecție fină a înălțimii de prindere (+ = mai sus)

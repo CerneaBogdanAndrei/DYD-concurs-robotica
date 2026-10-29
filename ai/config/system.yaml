@@ -3,7 +3,7 @@
 schema_version: 2
 
 cube:
-  size_mm: 29.0               # MĂSURAT de echipă 2026-10-29: 2,9 cm (regulamentul spune 30 mm nominal)
+  size_mm: 40.0               # 2026-10-29 seara: echipa lucrează cu cuburi de 40 mm (viziunea: 39,8 x 42,5 mm); cele vechi aveau 29
   calibrated: true
 
 # Gheara (date de echipă 2026-10-29, nemăsurate de brain). Deschiderile sunt INTERIOARE (între degete);

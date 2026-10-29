@@ -121,14 +121,16 @@ describe("ArmService (ArmInterface peste Robot)", () => {
       grips.push(a);
       return orig(id, a, t);
     };
-    assert.deepEqual(await svc.pick({ location: "source", cell: [1, 1], grip_mm: 39 }), { ok: true });
-    const servo39 = Math.trunc(135 + ((60 - 135) * (39 - 29)) / (52 - 29));
-    assert.deepEqual(grips, [servo39, C.GRIP_CLOSED]);
-    assert.deepEqual(await svc.place({ location: "dest", cell: [0, 0], release_mm: 35 }), { ok: true });
+    const open = C.CUBE_MM + 10; // abordarea: cubul + 2 x 5 mm
+    const rel = C.CUBE_MM + 6; // eliberarea: cubul + 2 x 3 mm
+    assert.deepEqual(await svc.pick({ location: "source", cell: [1, 1], grip_mm: open }), { ok: true });
+    const servoOpen = Math.trunc(135 + ((60 - 135) * (open - 29)) / (52 - 29));
+    assert.deepEqual(grips, [servoOpen, C.GRIP_CLOSED]);
+    assert.deepEqual(await svc.place({ location: "dest", cell: [0, 0], release_mm: rel }), { ok: true });
     // la stivuire, uv pune cubul peste cel de dedesubt, nu în centrul celulei
     assert.deepEqual(await svc.place({ location: "dest", cell: [0, 0], level: 1, uv: [0.75, 0.5] }), { ok: true });
     assert.ok(Math.abs(svc.resolve("dest", null, 1, 0, [0.75, 0.5]).y - svc.resolve("dest", [0, 0], 1, 0).y) > 5);
-    assert.equal(grips.at(-1), Math.trunc(135 + ((60 - 135) * (35 - 29)) / (52 - 29)));
+    assert.equal(grips.at(-1), Math.trunc(135 + ((60 - 135) * (rel - 29)) / (52 - 29)));
     // fără deschidere cerută: cea implicită (cubul + 2 x marja), nu GRIP_OPEN
     await svc.pick({ location: "source", cell: [0, 0] });
     assert.ok(!grips.includes(C.GRIP_OPEN));
@@ -137,7 +139,7 @@ describe("ArmService (ArmInterface peste Robot)", () => {
     assert.equal(status.grip_calibrated, true);
     assert.deepEqual(status.grip_range_mm, [29, 52]);
     const plain = (await service()).svc;
-    await assert.rejects(plain.pick({ location: "source", cell: [0, 0], grip_mm: 39 }), CalibError);
+    await assert.rejects(plain.pick({ location: "source", cell: [0, 0], grip_mm: open }), CalibError);
     assert.equal(plain.status().grip_calibrated, false);
   });
 
