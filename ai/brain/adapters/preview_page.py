@@ -106,7 +106,7 @@ ol.moves li::before { content: counter(m) "."; color: var(--muted); text-align: 
 <main>
 <section class="card">
   <h2>Live <span class="sub">fluxul camerei</span></h2>
-  <img class="view" src="stream.mjpg" alt="fluxul live al camerei">
+  <img class="view" id="l-img" src="stream.mjpg" alt="fluxul live al camerei" title="clic: reconectează fluxul">
   <dl class="kv">
     <dt>Cadre/s</dt><dd id="l-fps">–</dd>
     <dt>Rezoluție</dt><dd id="l-res">–</dd>
@@ -515,9 +515,20 @@ async function stop() {
 }
 
 /* ---------------------------------------------------------------- pornire */
+// Fluxul MJPEG e o singură cerere lungă: după o repornire a serverului browserul păstrează ultimul cadru și nu
+// reface singur conexiunea. Se reconectează când starea revine după o pauză, la o eroare a imaginii sau la clic.
+let streamLost = false;
+function reconnectStream() { $("l-img").src = "stream.mjpg?t=" + Date.now(); }
+$("l-img").addEventListener("error", () => setTimeout(reconnectStream, 1000));
+$("l-img").addEventListener("click", reconnectStream);
 async function poll() {
-  try { renderStatus(await api("GET", "status.json")); }
-  catch (e) { $("h-live-dot").className = "dot bad"; $("h-live").textContent = "pagina nu primește date (" + e.message + ")"; }
+  try {
+    renderStatus(await api("GET", "status.json"));
+    if (streamLost) { streamLost = false; reconnectStream(); }
+  } catch (e) {
+    streamLost = true;
+    $("h-live-dot").className = "dot bad"; $("h-live").textContent = "pagina nu primește date (" + e.message + ")";
+  }
   setTimeout(poll, 1000);
 }
 if (FEATURES.workbench) {
