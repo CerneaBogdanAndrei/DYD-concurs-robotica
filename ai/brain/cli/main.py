@@ -34,6 +34,7 @@ EXIT_OK = 0
 EXIT_SELFTEST_FAILED = 1
 EXIT_INPUT_ERROR = 2
 EXIT_NOT_ACTIONABLE = 3
+MAX_LENS_RMS_PX = 1.0  # peste atât, calibrarea obiectivului e respinsă (o calibrare bună: sub ~0,5 px)
 EXIT_STOPPED = 4
 
 logger = logging.getLogger("brain.cli")
@@ -138,6 +139,11 @@ def _build_parser() -> argparse.ArgumentParser:
     corners.add_argument("--location", required=True)
     corners.add_argument("--frames", nargs="+", required=True)
     corners.add_argument("--write", action="store_true", help="scrie valoarea în system.yaml (păstrând comentariile)")
+    lens = calib.add_parser("camera", help="distorsiunea obiectivului din poze cu o tablă de șah (scrie config/lens.yaml)")
+    lens.add_argument("--frames", nargs="+", required=True, help="10-20 poze cu tabla, din unghiuri diferite")
+    lens.add_argument("--pattern", default="9x6", help="colțurile INTERIOARE ale tablei, coloane x rânduri (implicit 9x6)")
+    lens.add_argument("--square-mm", type=float, required=True, help="latura unui pătrat al tablei, măsurată cu rigla")
+    lens.add_argument("--write", action="store_true", help="scrie config/lens.yaml (folosit apoi de toată viziunea)")
 
     selftest = sub.add_parser("selftest", help="teste reproductibile").add_subparsers(dest="action", required=True)
     stage0 = selftest.add_parser("stage0", help="selftest-ul viziunii pe scene sintetice")
@@ -518,6 +524,54 @@ def _cmd_calib_corners(config: AppConfig, args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def _cmd_calib_camera(config: AppConfig, args: argparse.Namespace) -> int:
+    from brain.perception.image_io import read_image
+    from brain.perception.lens import calibrate, chessboard_object_points, find_chessboard
+
+    try:
+        pattern = tuple(int(v) for v in args.pattern.lower().split("x"))
+        assert len(pattern) == 2 and min(pattern) >= 2
+    except (ValueError, AssertionError):
+        raise PerceptionInputError("--pattern trebuie de forma 9x6 (colțuri interioare), nu {}".format(args.pattern)) from None
+    objects, images, size = [], [], None
+    for path in _expand(args.frames):
+        image = read_image(path)
+        frame_size = (image.shape[1], image.shape[0])
+        if size is not None and frame_size != size:
+            raise PerceptionInputError("{}: rezoluție {} diferită de {}".format(path, frame_size, size))
+        size = frame_size
+        corners = find_chessboard(image, pattern)  # type: ignore[arg-type]
+        print("  {}: {}".format(path, "tablă găsită" if corners is not None else "tabla NU e găsită (ignorată)"))
+        if corners is not None:
+            objects.append(chessboard_object_points(pattern, args.square_mm))  # type: ignore[arg-type]
+            images.append(corners)
+    assert size is not None
+    matrix, dist, rms = calibrate(objects, images, size)
+    print("Calibrare din {} poze, {}x{}: eroare RMS {:.3f} px (bun: sub ~0,5 px)".format(len(images), size[0], size[1], rms))
+    print("  fx {:.1f}  fy {:.1f}  cx {:.1f}  cy {:.1f}".format(matrix[0, 0], matrix[1, 1], matrix[0, 2], matrix[1, 2]))
+    print("  distorsiune k1 k2 p1 p2 k3: {}".format(" ".join("{:+.4f}".format(v) for v in dist)))
+    if rms > MAX_LENS_RMS_PX:
+        # O calibrare proastă strică toată viziunea mai rău decât lipsa ei: nu se scrie.
+        raise PerceptionInputError(
+            "eroarea RMS {:.2f} px > {} px: calibrare nesigură, lens.yaml NU a fost scris. Refaceți pozele: tabla plată, "
+            "înclinată în unghiuri diferite (±30-45°), la distanțe diferite, și în colțurile imaginii".format(
+                rms, MAX_LENS_RMS_PX))
+    if args.write:
+        import yaml
+
+        target = Path(config.config_dir) / "lens.yaml"
+        data = {
+            "schema_version": 1, "calibrated": True, "image_size": [int(size[0]), int(size[1])],
+            "camera_matrix": [[round(float(v), 4) for v in row] for row in matrix],
+            "dist_coeffs": [round(float(v), 6) for v in dist], "rms_px": round(rms, 4),
+            "frames_used": len(images), "pattern": list(pattern), "square_mm": float(args.square_mm),
+        }
+        header = "# Parametrii obiectivului, scriși de `python -m brain calib camera` (nu se editează de mână).\n"
+        target.write_text(header + yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+        print("  scris în {} (viziunea îndreaptă de acum toate cadrele)".format(target))
+    return EXIT_OK
+
+
 def _cmd_memory_show(config: AppConfig, args: argparse.Namespace) -> int:
     from brain.memory.codec import scene_to_dict
     from brain.memory.store import SceneStore
@@ -549,6 +603,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if args.command == "report":
             return _cmd_report_timings(args)
         if args.command == "calib":
+            if args.action == "camera":
+                return _cmd_calib_camera(config, args)
             return _cmd_calib_corners(config, args)
         if args.command == "vision":
             return _cmd_vision_analyze(config, args)

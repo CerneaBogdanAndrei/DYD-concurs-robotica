@@ -1,0 +1,40 @@
+{
+  "reproduce": {
+    "scenarios": 20,
+    "success": 20,
+    "success_rate": 1.0,
+    "success_rate_feasible": 1.0,
+    "simulated_time_median_s": 66.6,
+    "simulated_time_max_s": 131.4,
+    "over_time_limit": 0,
+    "failures": []
+  },
+  "sort": {
+    "scenarios": 20,
+    "success": 15,
+    "success_rate": 0.75,
+    "success_rate_feasible": 1.0,
+    "simulated_time_median_s": 99.0,
+    "simulated_time_max_s": 131.4,
+    "over_time_limit": 0,
+    "failures": [
+      "sort_2 (seed 2): blue rămas pe small(2, 1)",
+      "sort_3 (seed 3): red rămas pe small(2, 1)",
+      "sort_13 (seed 13): green rămas pe small(1, 2); green rămas pe small(2, 1)",
+      "sort_15 (seed 15): yellow rămas pe small(2, 0); yellow rămas pe small(2, 2); yellow rămas pe small(1, 2)",
+      "sort_20 (seed 20): green rămas pe small(1, 1); red rămas pe small(1, 1); red rămas pe small(2, 1)"
+    ]
+  },
+  "tower": {
+    "scenarios": 20,
+    "success": 19,
+    "success_rate": 0.95,
+    "success_rate_feasible": 1.0,
+    "simulated_time_median_s": 45.0,
+    "simulated_time_max_s": 66.6,
+    "over_time_limit": 0,
+    "failures": [
+      "tower_20 (seed 20): turnul de pe small[0,1] e yellow-yellow-yellow-blue (cerut yellow-yellow-yellow-blue-red)"
+    ]
+  }
+}

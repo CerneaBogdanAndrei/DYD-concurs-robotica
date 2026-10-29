@@ -1,0 +1,109 @@
+{
+  "task": "reproduce",
+  "goal": "reproducere pe small: 3 celule cu cub, 3 goale",
+  "final_state": "DONE",
+  "goal_reached": true,
+  "budget_exhausted": false,
+  "unmet": [],
+  "warnings": [],
+  "error": null,
+  "elapsed_s": 23.4,
+  "moves_attempted": 2,
+  "move_outcomes": {
+    "ok": 2
+  },
+  "observations": 3,
+  "arm_commands": 7,
+  "first_plan": [
+    " 1. red small[2,2] (niv. 0) -> small[0,1] (niv. 0): roșu pe small[0,1] [cost substitut]",
+    " 2. green small[2,1] (niv. 0) -> small[1,2] (niv. 0): verde pe small[1,2] [cost substitut]"
+  ],
+  "first_plan_estimated_s": 25.0,
+  "last_plan": [],
+  "moves": [
+    {
+      "index": 1,
+      "move": "red small[2,2] (niv. 0) -> small[0,1] (niv. 0)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 1.8,
+      "duration_s": 9.0
+    },
+    {
+      "index": 2,
+      "move": "green small[2,1] (niv. 0) -> small[1,2] (niv. 0)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 12.6,
+      "duration_s": 9.0
+    }
+  ],
+  "transitions": [
+    [
+      "OBSERVE",
+      "observed",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "goal_reached",
+      "DONE"
+    ]
+  ],
+  "scenario": "reproduce_15",
+  "seed": 15,
+  "tags": [
+    "reproduce",
+    "partial"
+  ],
+  "note": "reproducere pe small: 3 celule cu cub, 3 goale",
+  "perception": "oracle",
+  "dry_run": false,
+  "arm": "mock",
+  "faults": [],
+  "success": true,
+  "truth_problems": [],
+  "expected_success": true,
+  "simulated_time_s": 23.4,
+  "within_time_limit": true,
+  "sim_events": [],
+  "world_final": [
+    "small: r0c1:red, r1c0:red, r1c2:green, r2c0:red",
+    "buffer_1: gol",
+    "buffer_2: gol"
+  ],
+  "wall_time_s": 0.02,
+  "note_timing": "timpi SIMULAȚI (SimDurations), nu măsurători"
+}

@@ -131,3 +131,51 @@ def test_dominant_orientation(yaw):
     theta, concentration = dominant_orientation(mask)
     assert yaw_difference_deg(normalize_yaw_deg(-theta), yaw) < 1.0
     assert concentration > 0.9
+
+
+# ---------------------------------------------------------------------- vedere oblică
+NADIR = (1.5, 4.5)  # punctul de sub cameră: 3 celule spre robot de la centrul caroiajului (ca pe braț)
+TOP_SCALE = 1.27  # H/(H-h): fața de sus apare cu ~0,8 celule mai departe pentru cubul din centru
+
+
+def _oblique_cube(image, cell, top_color, side_color, cube_px):
+    """Cubul din `cell` văzut oblic: fața de sus mărită și împinsă departe de nadir, fața laterală spre cameră."""
+    nadir = np.array(NADIR) * CELL
+    base = np.array([(cell[1] + 0.5) * CELL, (cell[0] + 0.5) * CELL])
+    top = nadir + TOP_SCALE * (base - nadir)
+    st, sb = cube_px * TOP_SCALE, cube_px
+    side = np.array([top + (-st / 2, st / 2), top + (st / 2, st / 2), base + (sb / 2, sb / 2), base + (-sb / 2, sb / 2)])
+    _fill(image, side, side_color)
+    _fill(image, _square(tuple(top), st, 0.0), top_color)
+    return top / CELL
+
+
+@pytest.fixture(scope="module")
+def oblique(app_config):
+    system = app_config.system
+    return CellAnalyzer(system.vision.cells, HueClassifier(app_config.colors), CELL, system.cube_px("medium"),
+                        nadir_uv=NADIR, top_scale=TOP_SCALE)
+
+
+@pytest.mark.parametrize("side_hsv", [(110, 200, 150), (0, 200, 190)], ids=["latura_albastra", "latura_rosie"])
+def test_oblique_view_assigns_by_base_and_reads_top_face(app_config, oblique, side_hsv):
+    from brain.domain.plan import correct_parallax
+
+    image = _board()
+    top_uv = _oblique_cube(image, (1, 1), _bgr(0, 200, 190), _bgr(*side_hsv), app_config.system.cube_px("medium"))
+    cells = _by_coord(oblique.analyze(image, 3, 3))
+    occupied = {coord: obs for coord, obs in cells.items() if obs.occupancy is Occupancy.OCCUPIED}
+    assert set(occupied) == {(1, 1)}  # fața de sus e în celula (0,1) în imagine, dar baza e în (1,1)
+    assert occupied[(1, 1)].color is Color.RED
+    uv = occupied[(1, 1)].uv_top
+    assert abs(uv[0] - top_uv[0]) < 0.08 and abs(uv[1] - top_uv[1]) < 0.08
+    height = 30.0 * TOP_SCALE / (TOP_SCALE - 1.0)  # H din H/(H-h) = TOP_SCALE, cu h = 30 mm
+    base = correct_parallax(uv, 30.0, height, NADIR)
+    assert abs(base[0] - 1.5) < 0.1 and abs(base[1] - 1.5) < 0.1
+
+
+def test_without_camera_geometry_the_oblique_cube_lands_in_the_wrong_cell(app_config, analyzer):
+    image = _board()
+    _oblique_cube(image, (1, 1), _bgr(0, 200, 190), _bgr(110, 200, 150), app_config.system.cube_px("medium"))
+    cells = _by_coord(analyzer.analyze(image, 3, 3))
+    assert cells[(0, 1)].occupancy is Occupancy.OCCUPIED  # de aceea e nevoie de nadir_uv și camera_height_mm

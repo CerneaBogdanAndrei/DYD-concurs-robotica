@@ -1,0 +1,209 @@
+{
+  "task": "reproduce",
+  "goal": "reproducere pe small: 6 celule cu cub, 3 goale",
+  "final_state": "DONE",
+  "goal_reached": true,
+  "budget_exhausted": false,
+  "unmet": [],
+  "warnings": [],
+  "error": null,
+  "elapsed_s": 66.6,
+  "moves_attempted": 6,
+  "move_outcomes": {
+    "ok": 6
+  },
+  "observations": 7,
+  "arm_commands": 19,
+  "first_plan": [
+    " 1. yellow small[2,0] (niv. 0) -> buffer_1 (niv. 0): golește small[2,0] (cubul galben nu e cerut acolo) [cost substitut]",
+    " 2. green small[1,0] (niv. 0) -> small[2,0] (niv. 0): verde pe small[2,0] [cost substitut]",
+    " 3. yellow small[1,1] (niv. 0) -> small[1,0] (niv. 0): galben pe small[1,0] [cost substitut]",
+    " 4. green small[0,0] (niv. 0) -> buffer_2 (niv. 0): golește small[0,0] (cubul verde nu e cerut acolo) [cost substitut]",
+    " 5. yellow buffer_1 (niv. 0) -> small[0,0] (niv. 0): galben pe small[0,0] [cost substitut]",
+    " 6. blue small[1,2] (niv. 0) -> buffer_1 (niv. 0): golește small[1,2] (cubul albastru nu e cerut acolo) [cost substitut]"
+  ],
+  "first_plan_estimated_s": 75.0,
+  "last_plan": [],
+  "moves": [
+    {
+      "index": 1,
+      "move": "yellow small[2,0] (niv. 0) -> buffer_1 (niv. 0)",
+      "purpose": "clear",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 1.8,
+      "duration_s": 9.0
+    },
+    {
+      "index": 2,
+      "move": "green small[1,0] (niv. 0) -> small[2,0] (niv. 0)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 12.6,
+      "duration_s": 9.0
+    },
+    {
+      "index": 3,
+      "move": "yellow buffer_1 (niv. 0) -> small[1,0] (niv. 0)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 23.4,
+      "duration_s": 9.0
+    },
+    {
+      "index": 4,
+      "move": "green small[0,0] (niv. 0) -> buffer_1 (niv. 0)",
+      "purpose": "clear",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 34.2,
+      "duration_s": 9.0
+    },
+    {
+      "index": 5,
+      "move": "yellow small[1,1] (niv. 0) -> small[0,0] (niv. 0)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 45.0,
+      "duration_s": 9.0
+    },
+    {
+      "index": 6,
+      "move": "blue small[1,2] (niv. 0) -> buffer_2 (niv. 0)",
+      "purpose": "clear",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 55.8,
+      "duration_s": 9.0
+    }
+  ],
+  "transitions": [
+    [
+      "OBSERVE",
+      "observed",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "goal_reached",
+      "DONE"
+    ]
+  ],
+  "scenario": "reproduce_17",
+  "seed": 17,
+  "tags": [
+    "reproduce",
+    "partial"
+  ],
+  "note": "reproducere pe small: 6 celule cu cub, 3 goale",
+  "perception": "oracle",
+  "dry_run": false,
+  "arm": "mock",
+  "faults": [],
+  "success": true,
+  "truth_problems": [],
+  "expected_success": true,
+  "simulated_time_s": 66.6,
+  "within_time_limit": true,
+  "sim_events": [],
+  "world_final": [
+    "small: r0c0:yellow, r0c1:green, r0c2:yellow, r1c0:yellow, r2c0:green, r2c2:yellow",
+    "buffer_1: green",
+    "buffer_2: blue"
+  ],
+  "wall_time_s": 0.04,
+  "note_timing": "timpi SIMULAȚI (SimDurations), nu măsurători"
+}

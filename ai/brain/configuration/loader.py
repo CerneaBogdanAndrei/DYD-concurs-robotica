@@ -24,6 +24,7 @@ from brain.configuration.models import (
     CubeConfig,
     GeometryThresholds,
     LineDetectionConfig,
+    LensConfig,
     LocationConfig,
     MemoryConfig,
     PlanningConfig,
@@ -46,6 +47,8 @@ SORT_MAP_SCHEMA_VERSION = 1
 SYSTEM_FILE = "system.yaml"
 COLORS_FILE = "colors.yaml"
 SORT_MAP_FILE = "sort_map.yaml"
+LENS_FILE = "lens.yaml"  # opțional, scris de `brain calib camera`
+LENS_SCHEMA_VERSION = 1
 
 PathLike = Union[str, "os.PathLike[str]"]
 
@@ -115,6 +118,36 @@ def load_system_config(path: PathLike) -> SystemConfig:
         planning=planning,
         preview=_parse_preview(root.section("preview")),
         source_file=root.file,
+        lens=load_lens_config(Path(str(path)).parent / LENS_FILE),
+    )
+
+
+def load_lens_config(path: PathLike) -> Optional[LensConfig]:
+    """Parametrii obiectivului, dacă fișierul există; altfel None (cadrele nu se corectează)."""
+    if not Path(str(path)).is_file():
+        return None
+    root = read_yaml(path)
+    root.reject_unknown(["schema_version", "image_size", "camera_matrix", "dist_coeffs", "rms_px", "frames_used",
+                         "pattern", "square_mm", "calibrated"])
+    _check_schema(root, LENS_SCHEMA_VERSION)
+    size = root.raw("image_size")
+    if not (isinstance(size, list) and len(size) == 2 and all(isinstance(v, int) and v > 0 for v in size)):
+        raise root.error("image_size", size, "trebuie [lățime, înălțime] în px")
+    matrix = root.raw("camera_matrix")
+    if not (isinstance(matrix, list) and len(matrix) == 3 and all(
+            isinstance(row, list) and len(row) == 3 and all(isinstance(v, (int, float)) for v in row) for row in matrix)):
+        raise root.error("camera_matrix", matrix, "trebuie o matrice 3x3 de numere")
+    if not (matrix[0][0] > 0 and matrix[1][1] > 0):
+        raise root.error("camera_matrix", matrix, "distanțele focale fx, fy trebuie să fie pozitive")
+    dist = root.raw("dist_coeffs")
+    if not (isinstance(dist, list) and 4 <= len(dist) <= 8 and all(isinstance(v, (int, float)) for v in dist)):
+        raise root.error("dist_coeffs", dist, "trebuie 4..8 numere (k1, k2, p1, p2[, k3...])")
+    return LensConfig(
+        image_size=(int(size[0]), int(size[1])),
+        camera_matrix=tuple(tuple(float(v) for v in row) for row in matrix),
+        dist_coeffs=tuple(float(v) for v in dist),
+        rms_px=root.number("rms_px", minimum=0.0),
+        calibrated=root.boolean("calibrated"),
     )
 
 
@@ -193,8 +226,9 @@ def _parse_locations(section: Section, cube_mm: float) -> Dict[str, LocationConf
         if height <= cube_mm * 5:
             raise loc.error("camera_height_mm", height, "camera trebuie să fie mult deasupra unui turn de 4 cuburi")
         nadir = _point(loc, "nadir_uv")
-        if not (0.0 <= nadir[0] <= cols and 0.0 <= nadir[1] <= rows):
-            raise loc.error("nadir_uv", list(nadir), "trebuie în interiorul grilei (0..cols, 0..rows)")
+        # Camera poate privi oblic: punctul de sub ea poate fi în afara caroiajului, dar nu oricât de departe.
+        if not (-2.0 * cols <= nadir[0] <= 3.0 * cols and -2.0 * rows <= nadir[1] <= 3.0 * rows):
+            raise loc.error("nadir_uv", list(nadir), "prea departe de caroiaj (permis: -2..3 caroiaje pe fiecare axă)")
         corners = None
         if loc.raw("expected_corners_px", None) is not None:
             corners = _point_list(loc, "expected_corners_px", 4)

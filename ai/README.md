@@ -147,6 +147,24 @@ Cu `host: 0.0.0.0`, oricine din aceeași rețea poate vedea camera (doar citire)
 Ca să le vadă și Claude Code de pe laptop: `curl -o cam.jpg http://<ip-pi>:8080/annotated.jpg`, apoi îi cereți
 să citească `cam.jpg` (sau îi dați direct adresa Pi-ului).
 
+Fluxul merge la **30 fps** (maximul camerei: 640×480, MJPG); analiza rulează într-un proces separat, deci nu îl
+încetinește. 60 fps nu se poate cu această cameră.
+
+**Camera oblică și obiectivul de 110°: două calibrări care cresc mult precizia**
+
+1. Distorsiunea obiectivului (o singură dată, cu o tablă de șah tipărită, plată, de ex. 10×7 pătrate de 25 mm =
+   9×6 colțuri interioare): 10–20 de poze din unghiuri diferite (±30–45°), la distanțe diferite și cu tabla și în
+   colțurile imaginii, apoi:
+   ```bash
+   .venv/bin/python -m brain camera capture --count 1 --out out/tabla/p01     # repetat pentru fiecare poză
+   .venv/bin/python -m brain calib camera --frames "out/tabla/*/frame_0.png" --pattern 9x6 --square-mm 25 --write
+   ```
+   Scrie `config/lens.yaml`; toată viziunea îndreaptă apoi cadrele. O calibrare cu eroare RMS peste 1 px e refuzată.
+2. Poziția camerei în poza de observare (`config/system.yaml`, la șablonul activ): `camera_height_mm` = înălțimea
+   camerei peste masă, măsurată cu rigla; `nadir_uv` = punctul de pe masă de sub cameră, în celule (`u` = coloană,
+   `v` = rând; poate fi în afara caroiajului). Cu ele, un cub e atribuit celulei după bază, nu după fața de sus
+   (care, văzută oblic, pare împinsă spre celula de mai departe), iar fețele laterale sunt ignorate.
+
 Cadre pentru analiză offline:
 
 ```bash

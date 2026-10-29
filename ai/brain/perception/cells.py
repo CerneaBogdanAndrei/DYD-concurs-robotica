@@ -5,6 +5,12 @@ cub deplasat de paralaxă spre celula vecină rămâne în celula corectă. O re
 (cuburi lipite în imagine) se separă după nucleele transformatei de distanță, cu încredere redusă.
 O celulă fără culoare e declarată goală doar dacă nu are nici muchii, nici obiecte întunecate:
 altfel e `unknown` (un cub decolorat nu trebuie raportat drept absent).
+
+Vedere oblică (camera nu e deasupra caroiajului; `nadir_uv` = punctul de sub cameră, `top_scale` = H/(H-h)):
+fața de sus apare mărită și împinsă departe de nadir, iar fețele laterale spre cameră se văd între bază și ea.
+Atunci: fața de sus = partea petei cea mai depărtată de nadir; celula se alege după BAZA cubului (fața de sus
+proiectată înapoi pe masă); o bandă subțire lipită de o pată mai depărtată de nadir e o față laterală (de altă
+culoare) și se ignoră; culoarea, yaw-ul și tipul feței se citesc doar de pe fața de sus.
 """
 
 from __future__ import annotations
@@ -36,6 +42,9 @@ REASON_YAW_UNRELIABLE = "yaw_unreliable"
 REASON_CLIPPED = "blob_clipped_by_image"
 
 OVERSIZED_AREA_FACTOR = 2.2
+ELONGATION_TRIM = 1.2  # pată alungită spre nadir (abatere std pe axă / transversal): conține și fețe laterale
+SIDE_MAX_DEPTH = 0.9  # o față laterală e mai subțire decât fața de sus (pe direcția nadirului)
+SINGLE_CUBE_MAX_LENGTH = 1.95  # față de sus + laterală < 2 fețe pe direcția nadirului; două cuburi lipite: mai mult
 OVERSIZED_EXTENT_FACTOR = 1.35
 WINDOW_MARGIN = 6
 
@@ -90,18 +99,34 @@ def dominant_orientation(filled: np.ndarray, exclude: Optional[np.ndarray] = Non
 
 
 class CellAnalyzer:
-    def __init__(self, config: CellAnalysisConfig, classifier: HueClassifier, cell_px: int, cube_px: float) -> None:
+    def __init__(
+        self,
+        config: CellAnalysisConfig,
+        classifier: HueClassifier,
+        cell_px: int,
+        cube_px: float,
+        nadir_uv: Optional[Tuple[float, float]] = None,
+        top_scale: float = 1.0,
+    ) -> None:
         self.config = config
         self.classifier = classifier
         self.cell_px = int(cell_px)
         self.cube_px = float(cube_px)
         self.cube_area = self.cube_px ** 2
+        self.nadir_uv = nadir_uv
+        self.top_scale = max(1.0, float(top_scale))
+        self.top_px = self.cube_px * self.top_scale  # latura feței de sus în imaginea redresată
         self._margin = 0
+        self._nadir: Optional[np.ndarray] = None
+        self.ignored_side_faces = 0
 
     def analyze(self, rectified: np.ndarray, rows: int, cols: int, margin: int = 0) -> List[CellResult]:
         """`margin`: px de imagine redresată în jurul grilei (cuburile de pe margine pot depăși conturul)."""
         cfg = self.config
         self._margin = int(margin)
+        self._nadir = None
+        if self.nadir_uv is not None and self.top_scale > 1.001:
+            self._nadir = np.array([margin + self.nadir_uv[0] * self.cell_px, margin + self.nadir_uv[1] * self.cell_px])
         hsv = cv2.cvtColor(rectified, cv2.COLOR_BGR2HSV)
         mask = self.classifier.colored_mask(hsv)
         kernel = np.ones((3, 3), np.uint8)
@@ -116,11 +141,17 @@ class CellAnalyzer:
             class_mask = np.where(classes == value, 255, 0).astype(np.uint8)
             for key, found in self._assign_parts(class_mask, rows, cols).items():
                 parts.setdefault(key, []).extend(found)
+        if self._nadir is not None:
+            parts = self._drop_side_faces(parts)
 
         owner = np.full(mask.shape, -1, dtype=np.int32)
         for (row, col), cell_parts in parts.items():
             for part in cell_parts:
                 owner[part.ys, part.xs] = row * cols + col
+        # Vedere oblică: corpul cubului (fețele laterale, umbra) acoperă imaginea de la fața de sus până la bază,
+        # deci peste celulele vecine. Silueta întreagă e „străină” pentru ele (altfel muchiile ei fac o celulă
+        # goală să pară un obiect necolorat).
+        silhouette = owner if self._nadir is None else self._silhouettes(owner, parts, cols)
 
         gray = cv2.GaussianBlur(cv2.cvtColor(rectified, cv2.COLOR_BGR2GRAY), (3, 3), 0)
         gx = cv2.Sobel(gray, cv2.CV_32F, 1, 0, ksize=3)
@@ -131,7 +162,7 @@ class CellAnalyzer:
         results: List[CellResult] = []
         for coord in iter_coords(rows, cols):
             index = coord.row * cols + coord.col
-            foreign = ((owner >= 0) & (owner != index)).astype(np.uint8)
+            foreign = ((silhouette >= 0) & (silhouette != index)).astype(np.uint8)
             foreign = cv2.dilate(foreign, np.ones((7, 7), np.uint8)) > 0
             cell_parts = parts.get((coord.row, coord.col), [])
             results.append(self._analyze_cell(coord, cell_parts, hsv, gray, edges, neutral, foreign, owner, index))
@@ -145,7 +176,10 @@ class CellAnalyzer:
         parts: Dict[Tuple[int, int], List[_Part]] = {}
 
         def add(ys: np.ndarray, xs: np.ndarray, split: str) -> None:
-            row, col = int((ys.mean() - margin) // cell), int((xs.mean() - margin) // cell)
+            if self._nadir is not None:
+                ys, xs = self._top_face(ys, xs)
+            bx, by = self.base_center(ys, xs)
+            row, col = int((by - margin) // cell), int((bx - margin) // cell)
             if 0 <= row < rows and 0 <= col < cols:
                 parts.setdefault((row, col), []).append(_Part(ys, xs, split))
 
@@ -155,6 +189,10 @@ class CellAnalyzer:
                 continue
             ys, xs = np.nonzero(labels == label)
             extent = max(int(stats[label, cv2.CC_STAT_WIDTH]), int(stats[label, cv2.CC_STAT_HEIGHT]))
+            if self._nadir is not None and self._single_cube_with_sides(ys, xs):
+                # Fața de sus + laterala de aceeași culoare: un singur cub, nu două lipite.
+                ys, xs = self._top_face(ys, xs)
+                area, extent = len(ys), int(max(np.ptp(xs), np.ptp(ys))) + 1
             if area <= OVERSIZED_AREA_FACTOR * self.cube_area and extent <= OVERSIZED_EXTENT_FACTOR * cell:
                 add(ys, xs, "")
                 continue
@@ -172,6 +210,100 @@ class CellAnalyzer:
                     if int(selected.sum()) >= cfg.min_component_px:
                         parts.setdefault((row, col), []).append(_Part(ys[selected], xs[selected], "cut"))
         return parts
+
+    # ------------------------------------------------------------------ vedere oblică
+    def _axis(self, ys: np.ndarray, xs: np.ndarray) -> Optional[np.ndarray]:
+        """Direcția nadir → pată (unitară), sau None dacă pata e chiar sub cameră."""
+        assert self._nadir is not None
+        d = np.array([float(xs.mean()), float(ys.mean())]) - self._nadir
+        norm = float(np.hypot(d[0], d[1]))
+        return None if norm < 1e-6 else d / norm
+
+    def _face_pixels(self, ys: np.ndarray, xs: np.ndarray) -> np.ndarray:
+        """Masca pixelilor feței de sus. O față singură are aceeași împrăștiere pe orice direcție (pătrat, oricum
+        ar fi rotit); o pată alungită spre nadir conține și fețe laterale: rămâne banda cea mai depărtată."""
+        keep = np.ones(len(ys), dtype=bool)
+        if self._nadir is None or len(ys) < 10:
+            return keep
+        u = self._axis(ys, xs)
+        if u is None:
+            return keep
+        rel = np.column_stack([xs, ys]).astype(np.float64) - self._nadir
+        along = rel @ u
+        across = rel @ np.array([-u[1], u[0]])
+        if float(along.std()) <= ELONGATION_TRIM * max(float(across.std()), 1e-6):
+            return keep
+        return along >= float(np.percentile(along, 99.0)) - self.top_px
+
+    def top_center(self, ys: np.ndarray, xs: np.ndarray) -> Tuple[float, float]:
+        """Centrul feței de sus (fără fețele laterale), în px redresați."""
+        keep = self._face_pixels(ys, xs)
+        return float(xs[keep].mean()), float(ys[keep].mean())
+
+    def base_center(self, ys: np.ndarray, xs: np.ndarray) -> Tuple[float, float]:
+        """Centrul bazei cubului (pe masă): fața de sus proiectată înapoi spre nadir cu factorul 1/top_scale."""
+        tx, ty = self.top_center(ys, xs)
+        if self._nadir is None:
+            return tx, ty
+        base = self._nadir + (np.array([tx, ty]) - self._nadir) / self.top_scale
+        return float(base[0]), float(base[1])
+
+    def _silhouettes(self, owner: np.ndarray, parts: Dict[Tuple[int, int], List[_Part]], cols: int) -> np.ndarray:
+        """`owner` + silueta fiecărui cub: înfășurătoarea feței de sus și a proiecției ei pe masă (baza)."""
+        assert self._nadir is not None
+        result = owner.copy()
+        for (row, col), cell_parts in parts.items():
+            for part in cell_parts:
+                top = np.column_stack([part.xs, part.ys]).astype(np.float64)
+                base = self._nadir + (top - self._nadir) / self.top_scale
+                hull = cv2.convexHull(np.vstack([top, base]).astype(np.float32))
+                body = np.zeros(owner.shape, np.uint8)
+                cv2.fillConvexPoly(body, np.rint(hull.reshape(-1, 2)).astype(np.int32), 1)
+                result[(body > 0) & (result < 0)] = row * cols + col
+        return result
+
+    def _single_cube_with_sides(self, ys: np.ndarray, xs: np.ndarray) -> bool:
+        """Pată alungită spre nadir, dar mai scurtă de două fețe de sus: un cub cu laterala vizibilă."""
+        u = self._axis(ys, xs)
+        if u is None or self._face_pixels(ys, xs).all():
+            return False
+        along = (np.column_stack([xs, ys]).astype(np.float64) - self._nadir) @ u
+        return float(np.percentile(along, 99.0) - np.percentile(along, 1.0)) < SINGLE_CUBE_MAX_LENGTH * self.top_px
+
+    def _top_face(self, ys: np.ndarray, xs: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        """Păstrează doar fața de sus când pata conține și fețe laterale de aceeași culoare."""
+        keep = self._face_pixels(ys, xs)
+        return ys[keep], xs[keep]
+
+    def _drop_side_faces(self, parts: Dict[Tuple[int, int], List[_Part]]) -> Dict[Tuple[int, int], List[_Part]]:
+        """Ignoră benzile subțiri (pe direcția nadirului) lipite de o pată mai mare, mai depărtată de nadir:
+        sunt fețe laterale ale aceluiași cub, de altă culoare decât fața de sus."""
+        assert self._nadir is not None
+        flat = [(key, part) for key, items in parts.items() for part in items]
+        result: Dict[Tuple[int, int], List[_Part]] = {}
+        for key, part in flat:
+            u = self._axis(part.ys, part.xs)
+            side = False
+            if u is not None:
+                perp = np.array([-u[1], u[0]])
+                rel = np.column_stack([part.xs, part.ys]).astype(np.float64) - self._nadir
+                along = rel @ u
+                near, far = float(np.percentile(along, 1.0)), float(np.percentile(along, 99.0))
+                if far - near < SIDE_MAX_DEPTH * self.top_px:
+                    for _, other in flat:
+                        if other is part or len(other.ys) <= len(part.ys):
+                            continue
+                        other_rel = np.column_stack([other.xs, other.ys]).astype(np.float64) - self._nadir
+                        other_near = float(np.percentile(other_rel @ u, 1.0))
+                        lateral = abs(float((other_rel.mean(axis=0) - rel.mean(axis=0)) @ perp))
+                        if abs(other_near - far) <= 0.35 * self.top_px and lateral <= 0.6 * self.top_px:
+                            side = True
+                            break
+            if side:
+                self.ignored_side_faces += 1
+                continue
+            result.setdefault(key, []).append(part)
+        return result
 
     def _separate(self, ys: np.ndarray, xs: np.ndarray) -> Optional[List[Tuple[np.ndarray, np.ndarray]]]:
         """Separă cuburi lipite: nucleele transformatei de distanță, apoi fiecare pixel la nucleul cel mai apropiat."""
@@ -345,8 +477,9 @@ class CellAnalyzer:
             top_face = TopFace.UNKNOWN
 
         occ_conf = _clamp(0.5 + 0.5 * (fraction - cfg.occupied_min_fraction) / cfg.occupied_min_fraction, 0.5)
-        cx, cy = float(xs.mean()), float(ys.mean())
-        offset = math.hypot(cx - self._margin - (coord.col + 0.5) * cell, cy - self._margin - (coord.row + 0.5) * cell)
+        cx, cy = self.top_center(ys, xs)
+        bx, by = self.base_center(ys, xs)  # = (cx, cy) fără vedere oblică
+        offset = math.hypot(bx - self._margin - (coord.col + 0.5) * cell, by - self._margin - (coord.row + 0.5) * cell)
         if offset > cfg.off_center_px:
             occ_conf *= 0.7
             reasons.append(REASON_OFF_CENTER)

@@ -1,0 +1,134 @@
+{
+  "task": "tower",
+  "goal": "turn green-green-yellow pe small[2,1]",
+  "final_state": "DONE",
+  "goal_reached": true,
+  "budget_exhausted": false,
+  "unmet": [],
+  "warnings": [],
+  "error": null,
+  "elapsed_s": 34.2,
+  "moves_attempted": 3,
+  "move_outcomes": {
+    "ok": 3
+  },
+  "observations": 4,
+  "arm_commands": 10,
+  "first_plan": [
+    " 1. green small[1,0] (niv. 0) -> small[2,1] (niv. 0): nivelul 0 al turnului: verde [cost substitut]",
+    " 2. green small[0,2] (niv. 1) -> small[2,1] (niv. 1): nivelul 1 al turnului: verde [cost substitut]",
+    " 3. yellow small[1,2] (niv. 0) -> small[2,1] (niv. 2): nivelul 2 al turnului: galben [cost substitut]"
+  ],
+  "first_plan_estimated_s": 37.5,
+  "last_plan": [],
+  "moves": [
+    {
+      "index": 1,
+      "move": "green small[1,0] (niv. 0) -> small[2,1] (niv. 0)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 1.8,
+      "duration_s": 9.0
+    },
+    {
+      "index": 2,
+      "move": "green small[0,2] (niv. 1) -> small[2,1] (niv. 1)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 12.6,
+      "duration_s": 9.0
+    },
+    {
+      "index": 3,
+      "move": "yellow small[1,2] (niv. 0) -> small[2,1] (niv. 2)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 23.4,
+      "duration_s": 9.0
+    }
+  ],
+  "transitions": [
+    [
+      "OBSERVE",
+      "observed",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "goal_reached",
+      "DONE"
+    ]
+  ],
+  "scenario": "tower_6",
+  "seed": 6,
+  "tags": [
+    "tower",
+    "buried"
+  ],
+  "note": "turn green-green-yellow pe small[2,1]",
+  "perception": "oracle",
+  "dry_run": false,
+  "arm": "mock",
+  "faults": [],
+  "success": true,
+  "truth_problems": [],
+  "expected_success": true,
+  "simulated_time_s": 34.2,
+  "within_time_limit": true,
+  "sim_events": [],
+  "world_final": [
+    "small: r0c2:green, r2c1:green-green-yellow",
+    "buffer_1: gol",
+    "buffer_2: gol"
+  ],
+  "wall_time_s": 0.02,
+  "note_timing": "timpi SIMULAȚI (SimDurations), nu măsurători"
+}

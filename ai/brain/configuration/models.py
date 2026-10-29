@@ -190,6 +190,17 @@ class PlanningConfig:
 
 
 @dataclass(frozen=True)
+class LensConfig:
+    """Parametrii intrinseci ai camerei (`config/lens.yaml`, scris de `brain calib camera`)."""
+
+    image_size: Tuple[int, int]  # rezoluția la care s-a calibrat (lățime, înălțime)
+    camera_matrix: Tuple[Tuple[float, float, float], ...]
+    dist_coeffs: Tuple[float, ...]  # k1, k2, p1, p2, k3
+    rms_px: float
+    calibrated: bool
+
+
+@dataclass(frozen=True)
 class SystemConfig:
     cube: CubeConfig
     locations: Dict[str, LocationConfig]
@@ -200,6 +211,7 @@ class SystemConfig:
     planning: PlanningConfig
     preview: PreviewConfig
     source_file: str
+    lens: Optional[LensConfig] = None  # None: fără corecția distorsiunii (lens.yaml lipsește)
 
     def px_per_mm(self, location: str) -> float:
         """Scara imaginii redresate a unei locații (px/mm)."""

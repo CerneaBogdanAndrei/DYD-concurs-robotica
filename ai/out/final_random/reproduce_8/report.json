@@ -1,0 +1,233 @@
+{
+  "task": "reproduce",
+  "goal": "reproducere pe small: 9 celule cu cub, 0 goale",
+  "final_state": "DONE",
+  "goal_reached": true,
+  "budget_exhausted": false,
+  "unmet": [],
+  "warnings": [],
+  "error": null,
+  "elapsed_s": 77.4,
+  "moves_attempted": 7,
+  "move_outcomes": {
+    "ok": 7
+  },
+  "observations": 8,
+  "arm_commands": 22,
+  "first_plan": [
+    " 1. blue small[0,0] (niv. 0) -> buffer_1 (niv. 0): golește small[0,0] (cubul albastru nu e cerut acolo) [cost substitut]",
+    " 2. red small[2,0] (niv. 0) -> small[0,0] (niv. 0): roșu pe small[0,0] [cost substitut]",
+    " 3. blue small[1,0] (niv. 0) -> small[2,0] (niv. 0): albastru pe small[2,0] [cost substitut]",
+    " 4. yellow small[1,2] (niv. 0) -> small[1,0] (niv. 0): galben pe small[1,0] [cost substitut]",
+    " 5. red small[2,2] (niv. 0) -> small[1,2] (niv. 0): roșu pe small[1,2] [cost substitut]",
+    " 6. blue buffer_1 (niv. 0) -> small[2,2] (niv. 0): albastru pe small[2,2] [cost substitut]"
+  ],
+  "first_plan_estimated_s": 75.0,
+  "last_plan": [],
+  "moves": [
+    {
+      "index": 1,
+      "move": "blue small[0,0] (niv. 0) -> buffer_1 (niv. 0)",
+      "purpose": "clear",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 1.8,
+      "duration_s": 9.0
+    },
+    {
+      "index": 2,
+      "move": "red small[2,0] (niv. 0) -> small[0,0] (niv. 0)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 12.6,
+      "duration_s": 9.0
+    },
+    {
+      "index": 3,
+      "move": "blue buffer_1 (niv. 0) -> small[2,0] (niv. 0)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 23.4,
+      "duration_s": 9.0
+    },
+    {
+      "index": 4,
+      "move": "red small[2,2] (niv. 0) -> buffer_1 (niv. 0)",
+      "purpose": "clear",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 34.2,
+      "duration_s": 9.0
+    },
+    {
+      "index": 5,
+      "move": "blue small[1,0] (niv. 0) -> small[2,2] (niv. 0)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 45.0,
+      "duration_s": 9.0
+    },
+    {
+      "index": 6,
+      "move": "yellow small[1,2] (niv. 0) -> small[1,0] (niv. 0)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 55.8,
+      "duration_s": 9.0
+    },
+    {
+      "index": 7,
+      "move": "red buffer_1 (niv. 0) -> small[1,2] (niv. 0)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 66.6,
+      "duration_s": 9.0
+    }
+  ],
+  "transitions": [
+    [
+      "OBSERVE",
+      "observed",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "goal_reached",
+      "DONE"
+    ]
+  ],
+  "scenario": "reproduce_8",
+  "seed": 8,
+  "tags": [
+    "reproduce",
+    "complete"
+  ],
+  "note": "reproducere pe small: 9 celule cu cub, 0 goale",
+  "perception": "oracle",
+  "dry_run": false,
+  "arm": "mock",
+  "faults": [],
+  "success": true,
+  "truth_problems": [],
+  "expected_success": true,
+  "simulated_time_s": 77.4,
+  "within_time_limit": true,
+  "sim_events": [],
+  "world_final": [
+    "small: r0c0:red, r0c1:yellow, r0c2:red, r1c0:yellow, r1c1:red, r1c2:red, r2c0:blue, r2c1:yellow, r2c2:blue",
+    "buffer_1: gol",
+    "buffer_2: gol"
+  ],
+  "wall_time_s": 0.05,
+  "note_timing": "timpi SIMULAȚI (SimDurations), nu măsurători"
+}

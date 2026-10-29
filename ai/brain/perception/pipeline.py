@@ -22,6 +22,7 @@ from brain.perception.cells import CellAnalyzer, CellResult
 from brain.perception.color import HueClassifier
 from brain.perception.grid_aruco import detect_grid_markers
 from brain.perception.grid_lines import detect_grid_lines
+from brain.perception.lens import Undistorter
 from brain.perception.photometry import (
     FrameQuality,
     aggregate_frames,
@@ -74,13 +75,22 @@ class VisionPipeline:
             raise PerceptionInputError("metoda aruco cere secțiunea vision.aruco în {}".format(system.source_file))
         self.classifier = HueClassifier(colors)
         self._analyzers: Dict[str, CellAnalyzer] = {}
+        # Obiectivul cu unghi larg curbează liniile: cadrele se îndreaptă înainte de orice (dacă există lens.yaml).
+        self._undistort = Undistorter(system.lens) if system.lens is not None else None
 
     def _analyzer(self, location: str) -> CellAnalyzer:
-        """Câte un analizor per șablon: raportul cub/celulă diferă între șabloanele mic, mediu și mare."""
+        """Câte un analizor per șablon: raportul cub/celulă diferă între șabloanele mic, mediu și mare.
+
+        Poziția camerei (punctul de sub ea și înălțimea) dă geometria vederii oblice: fața de sus a unui cub e
+        mărită cu H/(H-h) și împinsă departe de nadir; analizorul atribuie cubul după bază.
+        """
         if location not in self._analyzers:
+            loc = self.system.location(location)
+            height = loc.camera_height_mm
             self._analyzers[location] = CellAnalyzer(
                 self.system.vision.cells, self.classifier, self.system.vision.rectified_cell_px,
-                self.system.cube_px(location),
+                self.system.cube_px(location), nadir_uv=loc.nadir_uv,
+                top_scale=height / (height - self.system.cube.size_mm),
             )
         return self._analyzers[location]
 
@@ -91,6 +101,8 @@ class VisionPipeline:
         except KeyError as exc:
             raise PerceptionInputError(str(exc.args[0])) from None
         frames = validate_frames(frames)
+        if self._undistort is not None:
+            frames = self._undistort.undistort_all(frames)
         vision = self.system.vision
         captured = captured_at or utc_now_iso()
 

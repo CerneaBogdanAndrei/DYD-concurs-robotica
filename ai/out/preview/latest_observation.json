@@ -2,37 +2,37 @@
   "location": "medium",
   "rows": 3,
   "cols": 3,
-  "captured_at": "2026-10-29T15:32:21Z",
+  "captured_at": "2026-10-29T16:46:48Z",
   "actionable": true,
   "reasons": [],
-  "processing_ms": 678.8,
+  "processing_ms": 213.28,
   "geometry": {
     "method": "lines",
     "ok": true,
     "corners_px": [
       [
-        166.91,
-        42.61
+        149.03,
+        89.4
       ],
       [
-        548.24,
-        51.02
+        455.42,
+        77.63
       ],
       [
-        584.81,
-        432.76
+        468.33,
+        380.41
       ],
       [
-        126.38,
-        428.07
+        167.06,
+        395.48
       ]
     ],
-    "structure_score": 0.9727,
+    "structure_score": 0.9955,
     "metrics": {
-      "line_residual_cells": 0.028,
-      "condition_number": 1.21,
-      "structure_score": 0.9727,
-      "min_line_support": 0.7817,
+      "line_residual_cells": 0.0314,
+      "condition_number": 1.02,
+      "structure_score": 0.9955,
+      "min_line_support": 0.9724,
       "lines_measured": 8.0
     }
   },
@@ -40,9 +40,9 @@
     "frames_total": 5,
     "frames_valid": 5,
     "flags": [],
-    "mean_brightness": 161.94,
-    "contrast": 49.9,
-    "sharpness": 474.03
+    "mean_brightness": 195.68,
+    "contrast": 49.38,
+    "sharpness": 129.57
   },
   "cells": [
     {
@@ -68,181 +68,108 @@
       "row": 0,
       "col": 1,
       "occupancy": "occupied",
-      "occupancy_confidence": 0.7,
-      "color": "red",
+      "occupancy_confidence": 1.0,
+      "color": "blue",
       "color_confidence": 1.0,
-      "yaw_deg": -1.13,
-      "yaw_confidence": 0.3,
+      "yaw_deg": 39.96,
+      "yaw_confidence": 0.9713,
       "top_face": "full",
       "uv_top": [
-        1.5005,
-        0.4989
+        1.4939,
+        0.3657
       ],
-      "reasons": [
-        "split_blob"
-      ],
+      "reasons": [],
       "metrics": {
-        "colored_fraction": 2.0312,
-        "edge_density": 0.0,
-        "offset_px": 0.13,
-        "orientation_concentration": 0.949,
-        "face_fill": 0.997,
-        "size_ratio": 1.413,
+        "colored_fraction": 1.4558,
+        "edge_density": 0.0937,
+        "offset_px": 0.57,
+        "orientation_concentration": 0.889,
+        "face_fill": 0.974,
+        "size_ratio": 1.211,
         "color_dominance": 1.0,
-        "color_pixels": 5879.0
+        "color_pixels": 5204.0
       }
     },
     {
       "row": 0,
       "col": 2,
       "occupancy": "occupied",
-      "occupancy_confidence": 0.49,
-      "color": "red",
+      "occupancy_confidence": 1.0,
+      "color": "green",
       "color_confidence": 1.0,
-      "yaw_deg": -2.57,
-      "yaw_confidence": 0.3,
+      "yaw_deg": -19.14,
+      "yaw_confidence": 0.9859,
+      "top_face": "icon",
+      "uv_top": [
+        2.5991,
+        0.3502
+      ],
+      "reasons": [],
+      "metrics": {
+        "colored_fraction": 0.4586,
+        "edge_density": 0.3257,
+        "offset_px": 3.49,
+        "orientation_concentration": 0.894,
+        "face_fill": 0.311,
+        "size_ratio": 1.201,
+        "color_dominance": 1.0,
+        "color_pixels": 2232.0
+      }
+    },
+    {
+      "row": 1,
+      "col": 0,
+      "occupancy": "occupied",
+      "occupancy_confidence": 1.0,
+      "color": "green",
+      "color_confidence": 1.0,
+      "yaw_deg": -14.24,
+      "yaw_confidence": 0.9973,
       "top_face": "full",
       "uv_top": [
-        2.1597,
-        0.482
+        0.4119,
+        1.5827
       ],
-      "reasons": [
-        "off_center",
-        "split_blob"
-      ],
+      "reasons": [],
       "metrics": {
-        "colored_fraction": 0.6753,
-        "edge_density": 0.0545,
-        "offset_px": 34.08,
-        "orientation_concentration": 0.917,
-        "face_fill": 0.967,
-        "size_ratio": 0.819,
+        "colored_fraction": 1.4424,
+        "edge_density": 0.0983,
+        "offset_px": 8.42,
+        "orientation_concentration": 0.899,
+        "face_fill": 0.975,
+        "size_ratio": 1.202,
         "color_dominance": 1.0,
-        "color_pixels": 2216.0
-      }
-    },
-    {
-      "row": 1,
-      "col": 0,
-      "occupancy": "empty",
-      "occupancy_confidence": 1.0,
-      "color": "unknown",
-      "color_confidence": 0.0,
-      "yaw_deg": null,
-      "yaw_confidence": 0.0,
-      "top_face": "unknown",
-      "uv_top": null,
-      "reasons": [],
-      "metrics": {
-        "colored_fraction": 0.0,
-        "edge_density": 0.0,
-        "dark_px": 0.0,
-        "faint_fraction": 0.0005
+        "color_pixels": 4665.0
       }
     },
     {
       "row": 1,
       "col": 1,
       "occupancy": "occupied",
-      "occupancy_confidence": 0.7,
-      "color": "unknown",
-      "color_confidence": 0.0,
-      "yaw_deg": null,
-      "yaw_confidence": 0.0,
-      "top_face": "icon",
+      "occupancy_confidence": 1.0,
+      "color": "red",
+      "color_confidence": 1.0,
+      "yaw_deg": 39.97,
+      "yaw_confidence": 0.9349,
+      "top_face": "full",
       "uv_top": [
-        1.594,
-        1.5283
+        1.4819,
+        1.5495
       ],
-      "reasons": [
-        "ambiguous_hue",
-        "yaw_unreliable",
-        "split_blob"
-      ],
+      "reasons": [],
       "metrics": {
-        "colored_fraction": 0.7462,
-        "edge_density": 0.2593,
-        "offset_px": 9.82,
-        "orientation_concentration": 0.623,
-        "face_fill": 0.4,
-        "size_ratio": 1.352,
-        "color_dominance": 0.523,
-        "color_pixels": 3093.0
+        "colored_fraction": 1.449,
+        "edge_density": 0.089,
+        "offset_px": 4.64,
+        "orientation_concentration": 0.874,
+        "face_fill": 0.963,
+        "size_ratio": 1.215,
+        "color_dominance": 1.0,
+        "color_pixels": 5138.0
       }
     },
     {
       "row": 1,
-      "col": 2,
-      "occupancy": "occupied",
-      "occupancy_confidence": 0.49,
-      "color": "unknown",
-      "color_confidence": 0.0,
-      "yaw_deg": null,
-      "yaw_confidence": 0.0,
-      "top_face": "icon",
-      "uv_top": [
-        2.21,
-        1.3198
-      ],
-      "reasons": [
-        "ambiguous_hue",
-        "yaw_unreliable",
-        "off_center",
-        "split_blob"
-      ],
-      "metrics": {
-        "colored_fraction": 0.2677,
-        "edge_density": 0.1426,
-        "offset_px": 34.15,
-        "orientation_concentration": 0.765,
-        "face_fill": 0.578,
-        "size_ratio": 0.666,
-        "color_dominance": 0.533,
-        "color_pixels": 846.0
-      }
-    },
-    {
-      "row": 2,
-      "col": 0,
-      "occupancy": "empty",
-      "occupancy_confidence": 1.0,
-      "color": "unknown",
-      "color_confidence": 0.0,
-      "yaw_deg": null,
-      "yaw_confidence": 0.0,
-      "top_face": "unknown",
-      "uv_top": null,
-      "reasons": [],
-      "metrics": {
-        "colored_fraction": 0.0,
-        "edge_density": 0.0,
-        "dark_px": 0.0,
-        "faint_fraction": 0.0028
-      }
-    },
-    {
-      "row": 2,
-      "col": 1,
-      "occupancy": "unknown",
-      "occupancy_confidence": 0.0,
-      "color": "unknown",
-      "color_confidence": 0.0,
-      "yaw_deg": null,
-      "yaw_confidence": 0.0,
-      "top_face": "unknown",
-      "uv_top": null,
-      "reasons": [
-        "edges_without_color"
-      ],
-      "metrics": {
-        "colored_fraction": 0.0,
-        "edge_density": 0.0881,
-        "dark_px": 21.0,
-        "faint_fraction": 0.1244
-      }
-    },
-    {
-      "row": 2,
       "col": 2,
       "occupancy": "empty",
       "occupancy_confidence": 1.0,
@@ -257,7 +184,78 @@
         "colored_fraction": 0.0,
         "edge_density": 0.0,
         "dark_px": 0.0,
-        "faint_fraction": 0.0002
+        "faint_fraction": 0.0
+      }
+    },
+    {
+      "row": 2,
+      "col": 0,
+      "occupancy": "occupied",
+      "occupancy_confidence": 1.0,
+      "color": "green",
+      "color_confidence": 1.0,
+      "yaw_deg": -39.98,
+      "yaw_confidence": 0.9739,
+      "top_face": "full",
+      "uv_top": [
+        0.4069,
+        2.6862
+      ],
+      "reasons": [],
+      "metrics": {
+        "colored_fraction": 1.4274,
+        "edge_density": 0.0994,
+        "offset_px": 5.81,
+        "orientation_concentration": 0.89,
+        "face_fill": 0.975,
+        "size_ratio": 1.199,
+        "color_dominance": 1.0,
+        "color_pixels": 5141.0
+      }
+    },
+    {
+      "row": 2,
+      "col": 1,
+      "occupancy": "empty",
+      "occupancy_confidence": 1.0,
+      "color": "unknown",
+      "color_confidence": 0.0,
+      "yaw_deg": null,
+      "yaw_confidence": 0.0,
+      "top_face": "unknown",
+      "uv_top": null,
+      "reasons": [],
+      "metrics": {
+        "colored_fraction": 0.0,
+        "edge_density": 0.0,
+        "dark_px": 0.0,
+        "faint_fraction": 0.0
+      }
+    },
+    {
+      "row": 2,
+      "col": 2,
+      "occupancy": "occupied",
+      "occupancy_confidence": 1.0,
+      "color": "red",
+      "color_confidence": 1.0,
+      "yaw_deg": 29.91,
+      "yaw_confidence": 0.9733,
+      "top_face": "icon",
+      "uv_top": [
+        2.625,
+        2.6665
+      ],
+      "reasons": [],
+      "metrics": {
+        "colored_fraction": 0.4606,
+        "edge_density": 0.3528,
+        "offset_px": 2.84,
+        "orientation_concentration": 0.889,
+        "face_fill": 0.311,
+        "size_ratio": 1.205,
+        "color_dominance": 1.0,
+        "color_pixels": 2242.0
       }
     }
   ]

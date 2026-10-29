@@ -1,0 +1,240 @@
+{
+  "task": "tower",
+  "goal": "turn red-yellow-green-blue-red pe small[1,1]",
+  "final_state": "DONE",
+  "goal_reached": true,
+  "budget_exhausted": false,
+  "unmet": [],
+  "warnings": [
+    "small[0,0]: cub neprins de 2 ori; ocolit",
+    "verificare vizuală imposibilă după mutarea 5: small: neacționabil după 3 încercări (grid_line_unsupported); memoria păstrează starea așteptată",
+    "verificare vizuală imposibilă după mutarea 6: small: neacționabil după 3 încercări (grid_line_unsupported); memoria păstrează starea așteptată",
+    "verificare vizuală imposibilă după mutarea 7: small: neacționabil după 3 încercări (grid_line_unsupported); memoria păstrează starea așteptată"
+  ],
+  "error": null,
+  "elapsed_s": 90.0,
+  "moves_attempted": 7,
+  "move_outcomes": {
+    "pick_missed": 2,
+    "ok": 5
+  },
+  "observations": 15,
+  "arm_commands": 29,
+  "first_plan": [
+    " 1. red small[0,0] (niv. 0) -> small[1,1] (niv. 0): nivelul 0 al turnului: roșu [cost substitut]",
+    " 2. yellow small[2,2] (niv. 0) -> small[1,1] (niv. 1): nivelul 1 al turnului: galben [cost substitut]",
+    " 3. green small[2,1] (niv. 0) -> small[1,1] (niv. 2): nivelul 2 al turnului: verde [cost substitut]",
+    " 4. blue small[0,2] (niv. 0) -> small[1,1] (niv. 3): nivelul 3 al turnului: albastru [cost substitut]",
+    " 5. red small[1,2] (niv. 0) -> small[1,1] (niv. 4): nivelul 4 al turnului: roșu [cost substitut]"
+  ],
+  "first_plan_estimated_s": 62.5,
+  "last_plan": [],
+  "moves": [
+    {
+      "index": 1,
+      "move": "red small[0,0] (niv. 0) -> small[1,1] (niv. 0)",
+      "purpose": "goal",
+      "outcome": "pick_missed",
+      "detail": "reobservare: cubul a rămas pe small[0,0]",
+      "started_s": 1.8,
+      "duration_s": 9.0
+    },
+    {
+      "index": 2,
+      "move": "red small[0,0] (niv. 0) -> small[1,1] (niv. 0)",
+      "purpose": "goal",
+      "outcome": "pick_missed",
+      "detail": "reobservare: cubul a rămas pe small[0,0]",
+      "started_s": 12.6,
+      "duration_s": 9.0
+    },
+    {
+      "index": 3,
+      "move": "red small[1,0] (niv. 0) -> small[1,1] (niv. 0)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 23.4,
+      "duration_s": 9.0
+    },
+    {
+      "index": 4,
+      "move": "yellow small[2,2] (niv. 0) -> small[1,1] (niv. 1)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 34.2,
+      "duration_s": 9.0
+    },
+    {
+      "index": 5,
+      "move": "green small[2,1] (niv. 0) -> small[1,1] (niv. 2)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "neverificat vizual",
+      "started_s": 46.8,
+      "duration_s": 9.0
+    },
+    {
+      "index": 6,
+      "move": "blue small[2,0] (niv. 0) -> small[1,1] (niv. 3)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "neverificat vizual",
+      "started_s": 61.2,
+      "duration_s": 9.0
+    },
+    {
+      "index": 7,
+      "move": "red small[1,2] (niv. 0) -> small[1,1] (niv. 4)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "neverificat vizual",
+      "started_s": 75.6,
+      "duration_s": 9.0
+    }
+  ],
+  "transitions": [
+    [
+      "OBSERVE",
+      "observed",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "goal_reached",
+      "DONE"
+    ]
+  ],
+  "scenario": "tower_3",
+  "seed": 3,
+  "tags": [
+    "tower"
+  ],
+  "note": "turn red-yellow-green-blue-red pe small[1,1]",
+  "perception": "render",
+  "dry_run": false,
+  "arm": "mock",
+  "faults": [],
+  "success": true,
+  "truth_problems": [],
+  "expected_success": true,
+  "simulated_time_s": 90.0,
+  "within_time_limit": true,
+  "sim_events": [
+    "pick small(0, 0): ratat (eroare 8.7 mm, unghi 0.1°)",
+    "place small(1, 1): gheara era goală",
+    "pick small(0, 0): ratat (eroare 8.3 mm, unghi 0.4°)",
+    "place small(1, 1): gheara era goală"
+  ],
+  "world_final": [
+    "small: r0c0:red, r0c2:blue, r1c1:red-yellow-green-blue-red"
+  ],
+  "wall_time_s": 5.06,
+  "note_timing": "timpi SIMULAȚI (SimDurations), nu măsurători"
+}
