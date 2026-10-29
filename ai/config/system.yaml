@@ -12,10 +12,10 @@ cube:
 # Numele TREBUIE să coincidă cu locurile calibrate în serviciul de mișcare (npm run calib -- celule NUME),
 # iar observe_pose cu pozele învățate (npm run calib -- poza NUME).
 locations:
-  small:
-    rows: 3
-    cols: 3
-    cell_mm: 34.0             # NECALIBRAT: latura celulei, de măsurat cu rigla
+  small:                      # foaia folosită acum (brațul recalibrat pe ea). Măsurat 2026-10-29 cu rigla: celulă
+    rows: 3                   # 4,5 cm pe lățimea foii x 4,3 cm pe lungime; margini sus 1 cm, stânga 4,9 cm, dreapta
+    cols: 3                   # 2,8 cm, sub caroiaj 15,9 cm (4,9 + 13,5 + 2,8 = 21,2 cm; 1 + 12,9 + 15,9 = 29,8 cm: A4 ±2 mm)
+    cell_mm: 44.0             # media 45 x 43 (codul presupune celule pătrate; abaterea de ±1 mm e neglijabilă)
     line_width_mm: 2.0        # NECALIBRAT
     orientation_quarter_turns: 0
     observe_pose: observe_small
@@ -125,8 +125,8 @@ planning:
                               # în simularea lui sunt accesibile 0..6 (lungimi nemăsurate) — de reverificat pe braț
   min_confidence: 0.6         # cuburile cu încredere mai mică nu sunt manipulate
   match_top_face: prefer      # prefer | require | ignore (fața de sus a cubului ales vs. cea memorată)
-  active_locations: [medium]  # șabloanele de pe masă la probă (observate și folosite de sarcini)
-  staging_locations: [medium] # celulele libere de aici primesc cuburile mutate temporar
+  active_locations: [small]   # șabloanele de pe masă la probă (observate și folosite de sarcini)
+  staging_locations: [small]  # celulele libere de aici primesc cuburile mutate temporar
   buffer_points: []           # puncte tampon în afara caroiajului (ex. [buffer_1, buffer_2]), calibrate ca zonele:
                               # npm run calib -- zona buffer_1. Folosite doar când nu e nicio celulă liberă (S1 cu 9 cuburi).
   buffer_max_level: 0         # câte cuburi se pot stivui pe un punct tampon (0 = unul singur)
