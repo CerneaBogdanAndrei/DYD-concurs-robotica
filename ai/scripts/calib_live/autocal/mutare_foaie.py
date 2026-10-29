@@ -35,7 +35,7 @@ from detect import intersections  # noqa: E402
 
 # Obiectivul, estimat pe 2026-10-29 din 9 vederi ale caroiajului (f 738±44 px, k1 -0.21±0.06; ~50 grd pe orizontală).
 F, C, K1 = 740.0, (320.0, 240.0), -0.21
-COL, ROW = 45.0, 43.0
+COL, ROW = 33.0, 32.2  # foaia de sub braț: rigla 3,3 x 3,3 cm, din imagine 33 x 32,2 mm (2026-10-29 ~21:55; înainte 45 x 43, greșit)
 GRID = np.array([[COL * i, ROW * j] for j in range(4) for i in range(4)])
 
 
