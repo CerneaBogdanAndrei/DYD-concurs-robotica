@@ -34,8 +34,8 @@ locations:
     line_width_mm: 0.8        # MĂSURAT din poză: 5-6 px la 312 px/celulă ≈ 0,7-0,8 mm (±0,2 mm)
     orientation_quarter_turns: 0
     observe_pose: observe_small
-    camera_height_mm: 220.0   # ESTIMAT din modelul brațului (sesiunea Pi), de MĂSURAT cu rigla: masă -> cameră în observe_small
-    nadir_uv: [1.5, 4.5]      # ESTIMAT: punctul de sub cameră, ~3 celule spre robot de la centru (r crește spre robot)
+    camera_height_mm: 221.0   # MĂSURAT din imagine 2026-10-29 (PnP pe cele 16 intersecții, f≈740 px): masă -> cameră în observe_small, ±5%
+    nadir_uv: [1.86, 3.63]    # MĂSURAT la fel: punctul de sub cameră (u = coloane, v = linii, r crește spre robot); axa la ~19 grd de verticală
     expected_corners_px: null # opțional: colțurile grilei în imagine; alege grila corectă când se văd mai multe
   medium:                     # NEMĂSURAT: valorile de mai jos erau ale foii MICI (calibrată pe Pi sub numele medium,
     rows: 3                   # corectat 2026-10-29 în small). Foaia medium reală nu e măsurată și nici calibrată.

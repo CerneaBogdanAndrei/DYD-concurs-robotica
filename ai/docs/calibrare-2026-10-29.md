@@ -71,3 +71,8 @@ Foaia `medium` e mutată cu ~3 cm mai departe de robot decât poziția inițial�
 - Camera (din 9 vederi ale caroiajului): **nu se rotește cu servo 5**; f ≈ 740 px, deci ~47 grd pe orizontală (nu 110 grd);
   k1 ≈ −0,21. Calibrarea completă cameră-braț (hand-eye) a eșuat: rezidual 7 px, soluții nefizice (masa la −57 mm);
   cauza: unghiuri citite la grad întreg (1 grd = ~10 px) și vederi prea asemănătoare (în altele caroiajul ieșea din cadru).
+- Poziția camerei în `observe_small`, măsurată din imagine (PnP pe cele 16 intersecții, f ≈ 740 px): H = 221 mm
+  (210..233 pentru f 700..780), nadir uv = (1,86; 3,63) celule, axa la ~19 grd de verticală. `config/system.yaml` (small)
+  le folosește în loc de estimările 220 / (1,5; 4,5).
+- Cubul roșu pus pe r1c1 are ~40 mm (muchia de jos pe masă ~41 mm; viziunea, cu latura 40: 39,8 x 42,5 mm). Cu
+  `cube.size_mm: 29`, pata e prea mare, e tăiată după celule și apare pe r0c1; cu 40: r1c1, încredere 1,0, fără motive.
