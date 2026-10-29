@@ -115,6 +115,10 @@ def main():
           f"({c[0]:.1f}; {c[1]:.1f}), adică uv ({c[0] / COL:.2f}; {c[1] / ROW:.2f})")
     print(f"  axa bazei -> centrul r1c1: {np.linalg.norm(cell - c):.0f} mm; -> marginea foii dinspre robot: "
           f"{c[1] - 3 * ROW:.0f} mm")
+    out = HERE / "axa_bazei.json"
+    json.dump({"at": time.strftime("%Y-%m-%d %H:%M:%S"), "base_mm": c.tolist(), "col": COL, "row": ROW,
+               "pose": pose}, open(out, "w"), indent=1)
+    print(f"Salvat: {out}")
 
 
 if __name__ == "__main__":
