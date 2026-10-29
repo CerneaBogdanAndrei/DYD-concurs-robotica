@@ -55,3 +55,19 @@ Foaia `medium` e mutată cu ~3 cm mai departe de robot decât poziția inițial�
   verificat: punctele învățate cu înclinări diferite ale ghearei (−39…−62°), zero-ul servo-urilor 2-4 și poziția reală
   a foii. Măsurătoarea cea mai utilă: distanța cu rigla de la axa bazei la centrul celulei r1c1.
 - Postura `[90, 120, 0, 0, 90, 90]` -> `[-0,006; 0,116; 0,091] m` din document ține de DOFBOT-Pro (alt URDF): nu e folosită.
+
+## Calibrarea automată din cameră (2026-10-29, seara)
+- Foaia se mutase. Comparată cu imaginea din `observe_small` de la 18:14 (calibrarea cu mâna, foaia în poziția învățată),
+  pe cele 11 intersecții de margine (cubul acoperea restul): **−23,7 mm pe coloane (spre c0 = stânga robotului), −8,1 mm pe
+  linii (departe de robot), rotire −0,69 grd**. 6 reveniri home -> `observe_small`: unghiuri citite identice
+  [90, 90, 29, 3, 89], mutarea ±0,2 mm. Presupunere: la 18:14 brațul citea aceleași unghiuri (nu s-au salvat).
+- `calib.json`: caroiajul `small` mutat peste modelul învățat (prin celulele foii vechi): r0c0 (295,1; 41,0), r0c2
+  (295,5; −30,1), r2c0 (227,5; 43,1), r2c2 (227,9; −28,0), z 1,2. Toate cele 9 celule sunt accesibile pe nivelurile 0..4.
+- Proba fizică: gheara deschisă la 20 mm peste prindere pe r1c1, r0c0, r0c2, r2c2, r2c0 (cu o mutare intermediară,
+  ~3 mm diferență): toate accesibile, unghiurile citite la ±2 grd de cele comandate. **Centrarea nu e confirmată cu ochiul**:
+  camera privește înainte, peste gheară, și nu vede vârful ei.
+- Repetabilitatea pozei: venind din altă parte decât home, cotul a citit 30 în loc de 29 -> 3-7 mm eroare la măsurare.
+  De aceea `mutare_foaie.py` trece mereu prin home.
+- Camera (din 9 vederi ale caroiajului): **nu se rotește cu servo 5**; f ≈ 740 px, deci ~47 grd pe orizontală (nu 110 grd);
+  k1 ≈ −0,21. Calibrarea completă cameră-braț (hand-eye) a eșuat: rezidual 7 px, soluții nefizice (masa la −57 mm);
+  cauza: unghiuri citite la grad întreg (1 grd = ~10 px) și vederi prea asemănătoare (în altele caroiajul ieșea din cadru).
