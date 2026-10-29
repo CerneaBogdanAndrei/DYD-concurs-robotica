@@ -1,0 +1,23 @@
+{
+  "_nota": "Calibrare de TEST pentru serviciul colegilor pornit cu --sim (pozitii inventate, NU masuratori): sablonul medium (celule 43 mm), zonele S3 si doua puncte tampon.",
+  "poses": {
+    "observe_medium": [90, 110, 40, 30, 90]
+  },
+  "sites": {
+    "medium": {
+      "kind": "grid",
+      "points": {
+        "r0c0": [228, -43, 15],
+        "r0c2": [228, 43, 15],
+        "r2c0": [142, -43, 15],
+        "r2c2": [142, 43, 15]
+      }
+    },
+    "zone_red": { "kind": "point", "xyz": [160, 130, 15] },
+    "zone_yellow": { "kind": "point", "xyz": [215, 125, 15] },
+    "zone_green": { "kind": "point", "xyz": [160, -130, 15] },
+    "zone_blue": { "kind": "point", "xyz": [215, -125, 15] },
+    "buffer_1": { "kind": "point", "xyz": [110, 120, 15] },
+    "buffer_2": { "kind": "point", "xyz": [110, -120, 15] }
+  }
+}

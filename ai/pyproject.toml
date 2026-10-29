@@ -15,7 +15,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=7"]
+gif = ["Pillow>=8"]           # animația `brain sim run --gif` (fără Pillow: PNG-uri)
+dev = ["pytest>=7", "Pillow>=8"]
 
 [project.scripts]
 brain = "brain.cli.main:main"
@@ -27,5 +28,6 @@ include = ["brain*"]
 testpaths = ["tests"]
 markers = [
     "hardware: necesită hardware real (braț, cameră); sărit implicit",
+    "service: pornește serviciul colegilor în simulare (Node + dist/); sărit dacă lipsesc",
 ]
 addopts = "-m \"not hardware\""

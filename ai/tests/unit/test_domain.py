@@ -96,8 +96,8 @@ def test_cell_state_stack_rules():
     with pytest.raises(DomainValidationError):
         CellState(GridCoord(0, 0), Occupancy.OCCUPIED, 1.0, stack=())
     with pytest.raises(DomainValidationError):
-        CellState(GridCoord(0, 0), Occupancy.OCCUPIED, 1.0, stack=(cube,) * 5)
-    tower = CellState(GridCoord(0, 0), Occupancy.OCCUPIED, 1.0, stack=(cube,) * 4)
+        CellState(GridCoord(0, 0), Occupancy.OCCUPIED, 1.0, stack=(cube,) * 10)  # serviciul acceptă nivelurile 0..8
+    tower = CellState(GridCoord(0, 0), Occupancy.OCCUPIED, 1.0, stack=(cube,) * 5)  # turnul S2 are 5 cuburi
     assert tower.top is cube
 
 

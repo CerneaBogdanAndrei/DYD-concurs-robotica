@@ -19,7 +19,7 @@ from brain.domain.grid import GridCoord, iter_coords
 from brain.domain.observation import GridObservation
 
 SCHEMA_VERSION = 2
-MAX_STACK_HEIGHT = 4  # nivelurile 0..3
+MAX_STACK_HEIGHT = 9  # serviciul de mișcare acceptă nivelurile 0..8 (turnul S2 are 5 cuburi)
 MAX_ZONE_STACK = 9  # serviciul de mișcare acceptă nivelurile 0..8
 
 MetadataValue = Union[str, int, float, bool, None]

@@ -301,24 +301,40 @@ def _parse_planning(s: Section, locations: Dict[str, LocationConfig]) -> Plannin
             "max_tower_level",
             "min_confidence",
             "match_top_face",
+            "active_locations",
             "staging_locations",
+            "buffer_points",
+            "buffer_max_level",
             "max_pick_attempts",
             "camera_verify",
             "max_observe_attempts",
             "cost",
         ]
     )
+    active = s.sequence("active_locations", min_length=1)
+    for index, name in enumerate(active):
+        if name not in locations:
+            raise s.error("active_locations[{}]".format(index), name, "locație nedefinită în locations")
     staging = s.sequence("staging_locations")
     for index, name in enumerate(staging):
-        if name not in locations:
-            raise s.error("staging_locations[{}]".format(index), name, "locație nedefinită în locations")
+        if name not in active:
+            raise s.error("staging_locations[{}]".format(index), name, "trebuie să fie una din active_locations")
+    buffers = s.sequence("buffer_points", default=[])
+    for index, name in enumerate(buffers):
+        if not isinstance(name, str) or not name or name in locations:
+            raise s.error("buffer_points[{}]".format(index), name, "trebuie un nume de punct nevid, diferit de locații")
+    if len(set(buffers)) != len(buffers):
+        raise s.error("buffer_points", buffers, "nume duplicate")
     cost = s.section("cost")
     cost.reject_unknown(["radial_deg_per_mm", "adjacent_stack_penalty_deg", "location_switch_deg"])
     return PlanningConfig(
         max_tower_level=s.integer("max_tower_level", minimum=0, maximum=8),
         min_confidence=s.number("min_confidence", minimum=0.0, maximum=1.0),
         match_top_face=s.string("match_top_face", choices=MATCH_FACE_POLICIES),
+        active_locations=tuple(active),
         staging_locations=tuple(staging),
+        buffer_points=tuple(buffers),
+        buffer_max_level=s.integer("buffer_max_level", default=0, minimum=0, maximum=8),
         max_pick_attempts=s.integer("max_pick_attempts", minimum=1, maximum=10),
         camera_verify=s.string("camera_verify", choices=CAMERA_VERIFY_POLICIES),
         max_observe_attempts=s.integer("max_observe_attempts", minimum=1, maximum=10),

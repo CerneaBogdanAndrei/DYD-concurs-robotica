@@ -1,7 +1,8 @@
-"""`python -m brain` — comenzile Etapei 0 (viziune offline, memorie, selftest).
+"""`python -m brain` — viziune offline, memorie, selftest, simularea sarcinilor și rularea pe braț.
 
-Coduri de ieșire: 0 = succes; 1 = selftest picat; 2 = eroare de configurare sau de intrare;
-3 = observație neacționabilă (grila sau imaginea nu permit decizii sigure).
+Coduri de ieșire: 0 = succes; 1 = selftest picat / obiectiv neîndeplinit; 2 = eroare de configurare sau de
+intrare; 3 = observație neacționabilă (grila sau imaginea nu permit decizii sigure); 4 = execuție oprită
+(eroare de braț, oprire cerută sau refuz de siguranță).
 """
 
 from __future__ import annotations
@@ -16,7 +17,15 @@ from typing import List, Optional, Sequence
 
 from brain.configuration.loader import AppConfig, default_config_dir, load_app_config
 from brain.domain.cube import Occupancy
-from brain.domain.errors import BrainError, ConfigError, PerceptionInputError, SceneStateError, SceneStateNotFound
+from brain.domain.errors import (
+    ArmError,
+    BrainError,
+    ConfigError,
+    PerceptionInputError,
+    SafetyRejected,
+    SceneStateError,
+    SceneStateNotFound,
+)
 from brain.domain.observation import GridObservation
 from brain.domain.scene_state import SceneState, assign_unique_color_ids, location_from_observation, utc_now_iso
 from brain.logging_setup import configure_logging, log_event
@@ -25,6 +34,7 @@ EXIT_OK = 0
 EXIT_SELFTEST_FAILED = 1
 EXIT_INPUT_ERROR = 2
 EXIT_NOT_ACTIONABLE = 3
+EXIT_STOPPED = 4
 
 logger = logging.getLogger("brain.cli")
 
@@ -77,6 +87,58 @@ def _build_parser() -> argparse.ArgumentParser:
     capture.add_argument("--height", type=int, default=480)
     capture.add_argument("--count", type=int, default=5)
     capture.add_argument("--out", default="out/capture")
+
+    simrun = sim.add_parser("run", help="o sarcină cap-coadă în simulare (MockArm + lume simulată + FSM)")
+    simrun.add_argument("--task", required=True, choices=("tower", "sort", "reproduce", "all"))
+    simrun.add_argument("--order", default=None, help="turnul, de jos în sus: red,yellow,green,blue,red")
+    simrun.add_argument("--target", default=None, help="celula turnului: medium:r1c1 (implicit centrul primului șablon activ)")
+    simrun.add_argument("--target-file", default=None, help="ținta S1 (YAML/JSON: rows sau cells)")
+    simrun.add_argument("--target-location", default=None, help="unde se construiește aranjamentul S1")
+    simrun.add_argument("--example", action="store_true", help="exemplul din regulament (S1 sau S2)")
+    simrun.add_argument("--seed", type=int, default=1)
+    simrun.add_argument("--random", type=int, default=0, metavar="N", help="N scenarii aleatoare (seed, seed+1, ...)")
+    simrun.add_argument("--faults", default=None, help="erori injectate: pick:grasp_fail@1,place:drop%%0.1,...")
+    simrun.add_argument("--perception", choices=("oracle", "render"), default="render",
+                        help="render = cameră sintetică + viziunea reală; oracle = adevărul simulat (rapid)")
+    simrun.add_argument("--proximity", action="store_true", help="senzorul de proximitate simulat (HC-SR04)")
+    simrun.add_argument("--buffers", type=int, default=None, metavar="N",
+                        help="doar în simulare: N puncte tampon buffer_1..N (pe robot trebuie calibrate)")
+    simrun.add_argument("--gif", default=None, help="animația schematică (GIF cu Pillow, altfel PNG-uri)")
+    simrun.add_argument("--dry-run", action="store_true", help="doar observă și planifică")
+    simrun.add_argument("--service-url", default=None,
+                        help="serviciul colegilor pornit cu --sim (TeeArm: contractul real + lumea simulată)")
+    simrun.add_argument("--out", default="out/sim_run")
+
+    run = sub.add_parser("run", help="sarcina pe serviciul de mișcare (fără --execute: doar observă și planifică)")
+    run.add_argument("--task", required=True, choices=("tower", "sort", "reproduce", "memorize"))
+    run.add_argument("--arm", choices=("team",), default="team")
+    run.add_argument("--camera", choices=("usb", "files"), default="usb")
+    run.add_argument("--frames-dir", default=None, help="--camera files: DIR/<locație>/*.png sau DIR/*.png")
+    run.add_argument("--camera-index", type=int, default=0)
+    run.add_argument("--width", type=int, default=640)
+    run.add_argument("--height", type=int, default=480)
+    run.add_argument("--order", default=None)
+    run.add_argument("--target", default=None)
+    run.add_argument("--target-file", default=None)
+    run.add_argument("--target-location", default=None)
+    run.add_argument("--target-out", default=None, help="memorize: unde se scrie ținta S1 (implicit OUT/target.yaml)")
+    run.add_argument("--location", default=None, help="memorize: șablonul observat")
+    run.add_argument("--state", default=None, help="memoria de pornire (SceneState JSON)")
+    run.add_argument("--execute", action="store_true", help="MIȘCĂ brațul (cu confirmare)")
+    run.add_argument("--service-sim", action="store_true", help="acceptă serviciul pornit cu --sim (teste)")
+    run.add_argument("--preview", action="store_true", help="previzualizarea camerei în browser în timpul sarcinii")
+    run.add_argument("--port", type=int, default=None)
+    run.add_argument("--out", default=None, help="implicit out/run-<data>")
+
+    report = sub.add_parser("report", help="rapoarte").add_subparsers(dest="action", required=True)
+    timings = report.add_parser("timings", help="duratele comenzilor → valori propuse pentru secțiunea timing")
+    timings.add_argument("--journal", nargs="+", required=True, help="fișiere timings.jsonl (sau șabloane glob)")
+
+    calib = sub.add_parser("calib", help="calibrări din imagini").add_subparsers(dest="action", required=True)
+    corners = calib.add_parser("corners", help="colțurile grilei în imagine (expected_corners_px)")
+    corners.add_argument("--location", required=True)
+    corners.add_argument("--frames", nargs="+", required=True)
+    corners.add_argument("--write", action="store_true", help="scrie valoarea în system.yaml (păstrând comentariile)")
 
     selftest = sub.add_parser("selftest", help="teste reproductibile").add_subparsers(dest="action", required=True)
     stage0 = selftest.add_parser("stage0", help="selftest-ul viziunii pe scene sintetice")
@@ -135,8 +197,11 @@ def _cmd_config_validate(config: AppConfig) -> int:
     print("OK: {}/system.yaml, {}/colors.yaml".format(config.config_dir, config.config_dir))
     if not config.system.cube.calibrated:
         print("  ATENȚIE: cube.calibrated=false — latura cubului e nominală, nemăsurată")
-    print("  locații: {} (cell_mm NECALIBRAT până la măsurare)".format(", ".join(
-        "{}={:.0f} mm".format(n, l.cell_mm) for n, l in config.system.locations.items())))
+    print("  locații: {}; active la probă: {}".format(", ".join(
+        "{}={:.0f} mm".format(n, l.cell_mm) for n, l in config.system.locations.items()),
+        ", ".join(config.system.planning.active_locations)))
+    if config.system.planning.buffer_points:
+        print("  puncte tampon (de calibrat în serviciu): {}".format(", ".join(config.system.planning.buffer_points)))
     if not config.sort_map.calibrated:
         print("  ATENȚIE: sort_map.calibrated=false — zonele hărții nu sunt confirmate")
     if not config.colors.calibrated:
@@ -304,6 +369,156 @@ def _cmd_selftest_stage0(config: AppConfig, args: argparse.Namespace) -> int:
     return EXIT_OK if report["passed"] else EXIT_SELFTEST_FAILED
 
 
+def _goal_from_args(config: AppConfig, args: argparse.Namespace):
+    from brain.planning.goals import (
+        GoalError, SortGoal, TowerGoal, load_reproduce_goal, parse_order, parse_slot, reproduce_goal_from_dict,
+    )
+
+    system = config.system
+    first = system.planning.active_locations[0]
+    if args.task == "tower":
+        if not args.order:
+            raise GoalError("--task tower cere --order (ex. red,yellow,green,blue,red)")
+        target = parse_slot(args.target) if args.target else parse_slot("{}:r1c1".format(first))
+        if target.location not in system.planning.active_locations or target.cell is None:
+            raise GoalError("ținta turnului trebuie să fie o celulă a unui șablon activ ({}), nu {}".format(
+                ", ".join(system.planning.active_locations), args.target))
+        return TowerGoal(parse_order(args.order), target)
+    if args.task == "sort":
+        return SortGoal()
+    if args.task == "reproduce":
+        if not args.target_file:
+            raise GoalError("--task reproduce cere --target-file (ținta memorată: `brain run --task memorize`)")
+        goal = load_reproduce_goal(args.target_file, args.target_location)
+        if goal.location not in system.planning.active_locations:
+            raise GoalError("locația țintă {} nu e activă ({})".format(goal.location, ", ".join(system.planning.active_locations)))
+        return goal
+    return None
+
+
+def _cmd_sim_run(config: AppConfig, args: argparse.Namespace) -> int:
+    import dataclasses
+
+    from brain.cli.sim_run import SimOptions, parse_faults, run_scenario, summarize_batch
+    from brain.planning.goals import parse_order, parse_slot
+    from brain.simulation import scenario as sc
+
+    if args.buffers is not None:
+        planning = dataclasses.replace(config.system.planning,
+                                       buffer_points=tuple("buffer_{}".format(i + 1) for i in range(args.buffers)))
+        config = dataclasses.replace(config, system=dataclasses.replace(config.system, planning=planning))
+    system, sort_map = config.system, config.sort_map
+    out = Path(args.out)
+    options = SimOptions(perception=args.perception, faults=parse_faults(args.faults), proximity=args.proximity,
+                         dry_run=args.dry_run, service_url=args.service_url)
+    if args.random:
+        tasks = ("tower", "reproduce", "sort") if args.task == "all" else (args.task,)
+        reports = []
+        for task in tasks:
+            for index in range(args.random):
+                scenario = sc.random_scenario(task, system, sort_map, args.seed + index)
+                reports.append(run_scenario(config, scenario, dataclasses.replace(
+                    options, out_dir=out / scenario.name)))
+        summary = summarize_batch(reports)
+        out.mkdir(parents=True, exist_ok=True)
+        (out / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+        print("Simulare: {} scenarii aleatoare, seed {}..{}, percepție {} (timpi SIMULAȚI)".format(
+            len(reports), args.seed, args.seed + args.random - 1, args.perception))
+        for task, item in summary.items():
+            print("  {:<9} reușite {}/{} ({:.0%}; dintre cele fezabile {}), timp simulat median {} s, max {} s, peste limită {}".format(
+                task, item["success"], item["scenarios"], item["success_rate"],
+                "-" if item["success_rate_feasible"] is None else "{:.0%}".format(item["success_rate_feasible"]),
+                item["simulated_time_median_s"], item["simulated_time_max_s"], item["over_time_limit"]))
+            for failure in item["failures"][:8]:
+                print("    - {}".format(failure))
+        print("  rezumat: {}".format(out / "summary.json"))
+        return EXIT_OK
+    if args.task == "all":
+        raise PerceptionInputError("--task all merge doar cu --random N")
+    if args.example:
+        if args.task == "tower":
+            scenario = sc.example_s2(system, sort_map, args.seed, target=args.target or "{}:r1c1".format(
+                system.planning.active_locations[0]))
+        elif args.task == "reproduce":
+            scenario = sc.example_s1(system, sort_map, args.seed, args.target_location)
+        else:
+            scenario = sc.random_scenario("sort", system, sort_map, args.seed)
+    elif args.task == "tower":
+        goal = _goal_from_args(config, args)
+        scenario = sc.tower_scenario(system, sort_map, goal, args.seed)
+    elif args.task == "reproduce":
+        scenario = sc.reproduce_scenario(system, sort_map, _goal_from_args(config, args), args.seed)
+    else:
+        scenario = sc.random_scenario("sort", system, sort_map, args.seed)
+    options = dataclasses.replace(options, out_dir=out, gif=Path(args.gif) if args.gif else None)
+    report = run_scenario(config, scenario, options)
+    print("Scenariu {} (seed {}): {}".format(scenario.name, scenario.seed, scenario.note))
+    for line in sc.describe_world(scenario.world) if args.dry_run else []:
+        print("  lume: {}".format(line))
+    from brain.cli.run import print_report
+
+    print_report(report)
+    print("  REZULTAT (adevărul simulat): {}{}".format(
+        "REUȘIT" if report["success"] else ("doar plan" if args.dry_run else "NEREUȘIT"),
+        "" if report["success"] or args.dry_run else ": " + "; ".join(report["truth_problems"][:5])))
+    print("  timp simulat {} s (limită {} s); raport: {}{}".format(
+        report["simulated_time_s"], system.timing.task_limit_s, out / "report.json",
+        "; animație: {}".format(report["gif"]) if report.get("gif") else ""))
+    if args.dry_run:
+        return EXIT_OK
+    return EXIT_OK if report["success"] else EXIT_SELFTEST_FAILED
+
+
+def _cmd_run(config: AppConfig, args: argparse.Namespace) -> int:
+    import datetime
+
+    from brain.cli.run import print_report, run_task
+
+    if args.out is None:
+        args.out = "out/run-{}".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+    goal = _goal_from_args(config, args)
+    configure_logging(args.log_level, str(Path(args.out) / "log.jsonl"), mode="hardware" if args.execute else "planning")
+    report = run_task(config, goal, args)
+    print_report(report)
+    print("  rezultate: {}".format(args.out))
+    if report.get("task") == "memorize":
+        return EXIT_OK
+    if report["final_state"] == "ERROR":
+        return EXIT_STOPPED
+    return EXIT_OK if report["goal_reached"] or not args.execute else EXIT_SELFTEST_FAILED
+
+
+def _cmd_report_timings(args: argparse.Namespace) -> int:
+    from brain.cli.tools import load_journal, summarize_timings
+
+    summary = summarize_timings(load_journal(_expand(args.journal)))
+    if True in summary["simulated"]:
+        print("ATENȚIE: jurnalul conține durate SIMULATE, nu măsurători")
+    print("{:<14} {:>4} {:>9} {:>7} {:>7}".format("comandă", "n", "mediană", "p90", "max"))
+    for method, item in summary["methods"].items():
+        print("{:<14} {:>4} {:>8.2f}s {:>6.2f}s {:>6.2f}s".format(method, item["n"], item["median_s"], item["p90_s"], item["max_s"]))
+    if summary["proposal"]:
+        print("Propunere pentru config/system.yaml (secțiunea timing, p90):")
+        for key, value in summary["proposal"].items():
+            print("  {}: {}".format(key, value))
+    return EXIT_OK
+
+
+def _cmd_calib_corners(config: AppConfig, args: argparse.Namespace) -> int:
+    from brain.cli.tools import corners_from_frames, write_expected_corners
+    from brain.perception.image_io import read_image
+
+    config.system.location(args.location)
+    frames = [read_image(path) for path in _expand(args.frames)]
+    corners = corners_from_frames(config, args.location, frames)
+    print("{}: expected_corners_px: [{}]".format(args.location, ", ".join("[{:.1f}, {:.1f}]".format(x, y) for x, y in corners)))
+    if args.write:
+        target = Path(config.config_dir) / "system.yaml"
+        write_expected_corners(target, args.location, corners)
+        print("  scris în {}".format(target))
+    return EXIT_OK
+
+
 def _cmd_memory_show(config: AppConfig, args: argparse.Namespace) -> int:
     from brain.memory.codec import scene_to_dict
     from brain.memory.store import SceneStore
@@ -327,7 +542,15 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if args.command == "config":
             return _cmd_config_validate(config)
         if args.command == "sim":
+            if args.action == "run":
+                return _cmd_sim_run(config, args)
             return _cmd_sim_generate(config, args)
+        if args.command == "run":
+            return _cmd_run(config, args)
+        if args.command == "report":
+            return _cmd_report_timings(args)
+        if args.command == "calib":
+            return _cmd_calib_corners(config, args)
         if args.command == "vision":
             return _cmd_vision_analyze(config, args)
         if args.command == "camera":
@@ -347,6 +570,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     except (PerceptionInputError, SceneStateError, ValueError, KeyError) as exc:
         print("Eroare: {}".format(exc), file=sys.stderr)
         return EXIT_INPUT_ERROR
+    except (SafetyRejected, ArmError) as exc:
+        print("Oprit: {}".format(exc), file=sys.stderr)
+        return EXIT_STOPPED
     except BrainError as exc:
         print("Eroare: {}".format(exc), file=sys.stderr)
         return EXIT_INPUT_ERROR

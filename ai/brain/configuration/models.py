@@ -202,7 +202,10 @@ class PlanningConfig:
     max_tower_level: int
     min_confidence: float
     match_top_face: str
+    active_locations: Tuple[str, ...]
     staging_locations: Tuple[str, ...]
+    buffer_points: Tuple[str, ...]
+    buffer_max_level: int
     max_pick_attempts: int
     camera_verify: str
     max_observe_attempts: int
