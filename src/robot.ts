@@ -243,15 +243,19 @@ export class Robot {
     await this.line(x, y, z, zh, yaw, p, C.T_FINE, C.VERTICAL_STEPS);
   }
 
-  /** `releaseGrip` = unghiul ghearei la eliberare (regula C); implicit GRIP_OPEN (gheara necalibrată în mm). */
-  async place(x: number, y: number, z0: number, yaw = 0.0, releaseGrip: number = C.GRIP_OPEN): Promise<void> {
+  /** `releaseGrip` = unghiul ghearei la eliberare (regula C); implicit GRIP_RELEASE (gheara necalibrată în mm). */
+  async place(x: number, y: number, z0: number, yaw = 0.0, releaseGrip: number = C.GRIP_RELEASE): Promise<void> {
     const z = z0 + C.PLACE_GAP;
     const zh = z + C.HOVER_DZ;
     const p = this.pitchFor(x, y, z, zh);
     await this.approach(x, y, zh, yaw, p);
     await this.line(x, y, zh, z, yaw, p, C.T_FINE, C.VERTICAL_STEPS);
-    // C: deschidere mică, apoi sus pe verticală până la înălțimea de tranzit, fără nicio mișcare pe XY.
-    await this.gripper(releaseGrip);
-    await this.line(x, y, z, Math.max(zh, C.TRANSIT_MIN_Z), yaw, p, C.T_FINE, C.VERTICAL_STEPS);
+    // C: deschidere mică și lentă, apoi sus pe verticală, fără nicio mișcare pe XY: primii LIFT_SLOW_DZ mm încet.
+    await this.gripper(releaseGrip, C.T_RELEASE);
+    const zSlow = Math.min(z + C.LIFT_SLOW_DZ, Math.max(zh, C.TRANSIT_MIN_Z));
+    await this.line(x, y, z, zSlow, yaw, p, C.T_LIFT_SLOW, C.VERTICAL_STEPS);
+    if (zSlow < Math.max(zh, C.TRANSIT_MIN_Z)) {
+      await this.line(x, y, zSlow, Math.max(zh, C.TRANSIT_MIN_Z), yaw, p, C.T_FINE, C.VERTICAL_STEPS);
+    }
   }
 }

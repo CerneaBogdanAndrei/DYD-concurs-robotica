@@ -155,10 +155,10 @@ export class ArmService {
    * Unghiul ghearei pentru o deschidere în mm. Cu gheara calibrată în mm, deschiderea lipsă devine cea
    * implicită (cubul + 2 x marja); necalibrată, se folosește GRIP_OPEN, iar o deschidere cerută e refuzată.
    */
-  private gripFor(name: string, mm: unknown, margin: number): number {
+  private gripFor(name: string, mm: unknown, margin: number, uncalibrated: number): number {
     const calib = this.calib();
     if (mm === undefined || mm === null) {
-      return gripTable(calib).length > 0 ? gripServoForMm(calib, C.CUBE_MM + 2 * margin) : C.GRIP_OPEN;
+      return gripTable(calib).length > 0 ? gripServoForMm(calib, C.CUBE_MM + 2 * margin) : uncalibrated;
     }
     const v = checkFinite(name, mm);
     if (v <= C.CUBE_MM || v > C.GRIP_MAX_OPEN_MM) {
@@ -171,7 +171,7 @@ export class ArmService {
     const level = checkLevel(args.level ?? 0);
     const yaw = checkFinite("yaw_deg", args.yaw_deg ?? 0);
     const t = this.resolve(args.location, args.cell, level, yaw, args.uv);
-    const grip = this.gripFor("grip_mm", args.grip_mm, C.APPROACH_MARGIN_MM);
+    const grip = this.gripFor("grip_mm", args.grip_mm, C.APPROACH_MARGIN_MM, C.GRIP_OPEN);
     return this.attempt(() => this.robot.pick(t.x, t.y, t.z, t.yaw, grip));
   }
 
@@ -179,7 +179,7 @@ export class ArmService {
     const level = checkLevel(args.level ?? 0);
     const yaw = checkFinite("yaw_deg", args.yaw_deg ?? 0);
     const t = this.resolve(args.location, args.cell, level, yaw, args.uv);
-    const grip = this.gripFor("release_mm", args.release_mm, C.RELEASE_MARGIN_MM);
+    const grip = this.gripFor("release_mm", args.release_mm, C.RELEASE_MARGIN_MM, C.GRIP_RELEASE);
     return this.attempt(() => this.robot.place(t.x, t.y, t.z, t.yaw, grip));
   }
 

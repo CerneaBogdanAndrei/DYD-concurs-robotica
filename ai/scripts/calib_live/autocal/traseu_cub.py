@@ -12,14 +12,15 @@ Pentru fiecare mutare:
    deschide, cubul e măsurat din nou și pick-ul se reia o dată;
 4. place pe centrul celulei-țintă din liniile salvate (corectat pe ambele axe), înapoi în poza de start și
    verificarea: cât rămâne, în mm, între cub și fiecare linie a celulei, și rotirea cubului;
-5. dacă cubul e la peste GOOD_OFF_MM de centru sau intră pe linii mai mult de jumătate din grosimea lor: îl ia din
-   nou de unde a ajuns și îl pune corectat cu abaterile măsurate pe celula aceea (de cel mult MAX_FIXES ori).
+5. dacă cubul e la peste GOOD_OFF_MM de centru, intră pe linii mai mult de jumătate din grosimea lor sau e rotit
+   peste YAW_TOL: îl ia din nou de unde a ajuns (degetele aliniate cu el) și îl pune corectat cu ce s-a măsurat chiar
+   acolo: poziția cu abaterea ultimei puneri, rotirea încheieturii cu pasul -rotire / k (de cel mult MAX_FIXES ori).
 Cum stă cubul în gheară: degetele se închid lateral (perpendicular pe braț), deci cubul se centrează lateral; unde
 ajunge arată abaterea laterală a ghearei (folosită la pick). La punere se învață abaterea întreagă (pe ambele axe,
 punere - trimitere), pe fiecare celulă: pe 2026-10-29 cubul a ajuns cu ~4 mm spre robot pe r1c1 și ~6 mm pe r0c0.
-Rotirea nu se corectează: cu gheara înclinată, încheietura abia rotește cubul (`proba_rotire.py` pe r1c1: ~0,23 din
-comandă) și îl mută lateral (-4,3 mm la -10 grd). Cubul păstrează cam rotirea brațului: pe coloanele c0 și c2 baza e
-rotită ~7 grd, deci cubul ajunge rotit cam atât.
+Rotirea: cu gheara înclinată, încheietura rotește cubul pe foaie doar cu o parte k din comandă (`proba_rotire.py` pe
+r1c1, cu eliberarea de dinainte, de sus: k ~0,23) și îl mută și lateral (-4,3 mm la -10 grd). k se învață din punerile
+pe aceeași celulă cu comenzi diferite. Cubul păstrează cam rotirea brațului: pe c0 și c2 baza e rotită ~7 grd.
 Rezultatele se scriu după fiecare punere în `traseu_cub.json`.
 
     ai/.venv/bin/python ai/scripts/calib_live/autocal/traseu_cub.py 00 01 02 12 22 21 20 10 11
@@ -48,14 +49,16 @@ REF = HERE / "ref/observe_small"  # imaginea foii goale din poza de start (mutar
 POSE_PX = 6.0  # colțurile mai departe de atât față de referință (~1,6 mm): poza de start nu s-a repetat (de obicei 1-3 px)
 GRIP_EMPTY = 2  # gheara citită la cel mult atât sub comandă = goală
 MAX_FIX_MM = 8.0  # corecția nu trece de atât: peste, e mai probabil o măsurătoare greșită
-K_WRIST = 0.23  # cât din rotirea comandată a cubului se vede pe foaie (proba_rotire.py pe r1c1, 2026-10-29)
-MAX_FIX_YAW = 0.0  # corecția de rotire: oprită (vezi mai sus)
+K_WRIST = 0.23  # cât din rotirea comandată a cubului se vede pe foaie, la început (proba_rotire.py pe r1c1)
+K_RANGE = (0.15, 1.0)  # k învățat rămâne între acestea
+MAX_FIX_YAW = 25.0  # rotirea comandată a încheieturii, cel mult (grd)
 GOOD_OFF_MM = 2.0  # cubul bine pus: centrul lui la cel mult atât de centrul celulei
-GOOD_MARGIN_MM = -0.4  # ... și intră pe linii (0,8 mm) cel mult jumătate din grosimea lor
-# Abaterea de punere măsurată înainte (punere - trimitere, mm: x spre c2, y spre robot), ca punct de plecare:
-# r1c1 din proba_rotire.py (comanda 0, de 2 ori), r0c0 din traseul de la 23:33 (2 puneri cu comanda 0).
-PRIOR_XY = [((1.5, 1.5), (-0.2, 4.25)), ((0.5, 0.5), (-0.7, 6.0))]
-MAX_FIXES = 2
+GOOD_MARGIN_MM = -0.4  # ... intră pe linii (0,8 mm) cel mult jumătate din grosimea lor
+YAW_TOL = 1.5  # ... și e rotit cel mult atât (camera: ~0,5 grd între două analize)
+# Abaterea de punere de la început (punere - trimitere, mm: x spre c2, y spre robot): echipa, pe r1c1, 2026-10-30:
+# cubul trebuia pus cu 6 mm mai spre r0c1 și 1 mm mai spre r1c2 (camera văzuse +4,6 mm spre robot, -0,5 mm).
+PRIOR_XY = [((1.5, 1.5), (-1.0, 6.0))]
+MAX_FIXES = 3
 OUT = HERE / "traseu_cub.json"
 
 
@@ -179,6 +182,23 @@ def predict(data, uv, limit=MAX_FIX_MM):
     return max(-limit, min(limit, e))
 
 
+def base_angle(uv):
+    """Unghiul bazei (grd) spre punctul uv, față de direcția spre foaie (+ = spre c0)."""
+    dx, dy = uv[0] * COL - BASE_MM[0], uv[1] * ROW - BASE_MM[1]
+    return math.degrees(math.atan2(-dx, -dy))
+
+
+def predict_yaw0(data, uv):
+    """Rotirea cu care ar ajunge cubul la comanda 0, în uv. Cubul păstrează cam rotirea brațului, deci o dreaptă în
+    unghiul bazei prin celulele măsurate, când unghiurile lor diferă cu cel puțin 3 grd; altfel media ponderată."""
+    if len(data) >= 2:
+        th = np.array([base_angle(p) for p, _ in data])
+        if th.max() - th.min() >= 3.0:
+            k = np.linalg.lstsq(np.c_[np.ones(len(th)), th], np.array([e for _, e in data]), rcond=None)[0]
+            return float(np.clip(k[0] + k[1] * base_angle(uv), -20.0, 20.0))
+    return predict(data, uv, 45.0)
+
+
 def corrected(uv, e_mm):
     """Punctul în care trebuie trimisă gheara ca să ajungă în uv, cu abaterea laterală e_mm."""
     lx, ly = lateral_dir(uv)
@@ -201,6 +221,8 @@ def look(cube, tries=3):
         b = dict(b, uv_top=SHEET.to_ref(o2, b["uv_top"]))
         ua, ub = cube.base_uv(a), cube.base_uv(b)
         if math.hypot((ua[0] - ub[0]) * COL, (ua[1] - ub[1]) * ROW) <= 1.5:
+            if a["yaw_deg"] is not None and abs(wrap45(a["yaw_deg"] - b["yaw_deg"])) <= 2.0:
+                b = dict(b, yaw_deg=round(b["yaw_deg"] + wrap45(a["yaw_deg"] - b["yaw_deg"]) / 2.0, 2))
             return b, ub, o2, img
     return None
 
@@ -256,11 +278,19 @@ def main():
     learned, learned_yaw, log = [], [], []
     learned_xy = [(uv, np.array(e)) for uv, e in PRIOR_XY]
 
+    k_pairs = []  # k măsurat: (rotirea cubului) / (rotirea comandată), între două puneri pe aceeași celulă
+
+    def k_now():
+        return float(np.clip(np.median(k_pairs), *K_RANGE)) if k_pairs else K_WRIST
+
+    def clamp_yaw(v):
+        return max(-MAX_FIX_YAW, min(MAX_FIX_YAW, v))
+
     def aim(target):
-        """Unde și cu ce rotire se trimite gheara ca cubul să ajungă drept în centrul `target`."""
+        """Prima punere pe o celulă: unde și cu ce rotire, din tot ce s-a măsurat până acum (celulele apropiate)."""
         e = predict_xy(learned_xy, target)
-        y0 = predict(learned_yaw, target, 45.0)
-        return [target[0] - e[0] / COL, target[1] - e[1] / ROW], max(-MAX_FIX_YAW, min(MAX_FIX_YAW, -y0 / K_WRIST)), e
+        y0 = predict_yaw0([(uv, wrap45(yw - k_now() * cm)) for uv, cm, yw in learned_yaw], target)
+        return [target[0] - e[0] / COL, target[1] - e[1] / ROW], clamp_yaw(-y0 / k_now()), e
 
     start_pose()
     for r, c in route:
@@ -308,18 +338,23 @@ def main():
             lx, ly = lateral_dir(target)
             ex, ey = (landed[0] - place_uv[0]) * COL, (landed[1] - place_uv[1]) * ROW  # față de unde a fost trimisă gheara
             e_true = ex * lx + ey * ly  # abaterea laterală a ghearei pe celula-țintă
-            y0 = wrap45(got["yaw_deg"] - K_WRIST * yaw_cmd)  # rotirea cu care ar ajunge cubul la comanda 0
+            if fix and abs(yaw_cmd - prev_cmd) >= 3.0:  # aceeași celulă, altă rotire comandată: cât s-a rotit cubul
+                k_pairs.append(wrap45(got["yaw_deg"] - prev_yaw) / (yaw_cmd - prev_cmd))
+            prev_cmd, prev_yaw = yaw_cmd, got["yaw_deg"]
             off = math.hypot((landed[0] - target[0]) * COL, (landed[1] - target[1]) * ROW)
             learned.append((target, e_true))
             learned_xy.append((target, np.array([ex, ey])))
-            learned_yaw.append((target, y0))
-            good = (got["row"], got["col"]) == (r, c) and off <= GOOD_OFF_MM and min(margins.values()) >= GOOD_MARGIN_MM
-            say(f"  pus{' (corecția ' + str(fix) + ')' if fix else ''}: {off:.1f} mm de centru, rotit {got['yaw_deg']:+.1f} grd; "
+            learned_yaw.append((target, yaw_cmd, got["yaw_deg"]))
+            straight = bool(abs(got["yaw_deg"]) <= YAW_TOL)  # bool: numpy.bool_ nu se scrie în JSON
+            good = bool((got["row"], got["col"]) == (r, c) and off <= GOOD_OFF_MM
+                        and min(margins.values()) >= GOOD_MARGIN_MM and straight)
+            say(f"  pus{' (corecția ' + str(fix) + ')' if fix else ''}: {off:.1f} mm de centru, rotit {got['yaw_deg']:+.1f} grd "
+                f"({'drept' if straight else 'STRÂMB'}, încheietura {yaw_cmd:+.1f} grd, k {k_now():.2f}); "
                 "până la linii: " + ", ".join(f"{k} {v:+.1f}" for k, v in margins.items())
                 + f" mm -> {'BINE' if good else 'DE CORECTAT'}; abaterea laterală a ghearei aici {e_true:+.1f} mm")
             log.append({"cell": f"r{r}c{c}", "from": f"r{src_cell[0]}c{src_cell[1]}", "fix": fix, "target_uv": target,
                         "sent_uv": place_uv, "yaw_cmd": yaw_cmd, "landed_uv": landed, "yaw": got["yaw_deg"],
-                        "off_mm": off, "margins_mm": margins, "lateral_mm": e_true, "good": good})
+                        "off_mm": off, "margins_mm": margins, "lateral_mm": e_true, "k": k_now(), "good": good})
             json.dump({"at": time.strftime("%Y-%m-%d %H:%M:%S"), "moves": log}, open(OUT, "w"), indent=1, ensure_ascii=False)
             post("beep", {"n": 1})
             if good or fix == MAX_FIXES:
@@ -333,8 +368,12 @@ def main():
                     sys.exit("Gheara strânge ceva, dar pe foaie se vede un cub: opresc cu gheara închisă.")
                 post("open_gripper")
                 sys.exit("Pick-ul pentru corecție a ratat: opresc (gheara deschisă, cubul e pe foaie).")
-            place_uv, yaw_cmd, e_dst = aim(target)
-            say(f"  pun din nou corectat cu {-e_dst[0]:+.1f} mm pe coloane, {-e_dst[1]:+.1f} mm spre robot, rotire {yaw_cmd:+.1f} grd")
+            # pe aceeași celulă: poziția cu abaterea punerii de acum, rotirea cu un pas spre 0 (după k)
+            e_dst = np.array([ex, ey])
+            place_uv = [target[0] - ex / COL, target[1] - ey / ROW]
+            if not straight:
+                yaw_cmd = clamp_yaw(yaw_cmd - got["yaw_deg"] / k_now())
+            say(f"  pun din nou corectat cu {-ex:+.1f} mm pe coloane, {-ey:+.1f} mm spre robot, încheietura {yaw_cmd:+.1f} grd")
     finals = [m for i, m in enumerate(log) if i + 1 == len(log) or log[i + 1]["fix"] == 0]
     say(f"Gata: {sum(m['good'] for m in finals)}/{len(finals)} mutări bine puse ({len(log) - len(finals)} corecții). "
         f"Rezultate: {OUT}")

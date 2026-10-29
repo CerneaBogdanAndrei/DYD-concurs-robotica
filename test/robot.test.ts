@@ -72,13 +72,17 @@ describe("Robot (mișcări portate din dofbot.py)", () => {
     }
   });
 
-  it("place: eliberează la z + PLACE_GAP și urcă înapoi", async () => {
+  it("place: eliberează la z + PLACE_GAP, deschide doar la GRIP_RELEASE și urcă înapoi", async () => {
     const { robot, events } = await recorded();
     await robot.place(200, 0, 45);
-    const openAt = events.findIndex((e) => e.kind === "grip" && e.v === C.GRIP_OPEN);
+    const openAt = events.findIndex((e) => e.kind === "grip" && e.v === C.GRIP_RELEASE);
+    assert.ok(openAt > 0, "eliberarea e la GRIP_RELEASE");
     const low = moves(events.slice(0, openAt)).at(-1)!;
     assert.ok(Math.abs(low.z - (45 + C.PLACE_GAP)) < TOL);
-    assert.equal(robot.grip, C.GRIP_OPEN);
+    const up = moves(events.slice(openAt));
+    assert.ok(up.length > 0 && up.at(-1)!.z >= C.TRANSIT_MIN_Z - TOL, "urcă până la înălțimea de tranzit");
+    assert.ok(up.every((m) => Math.hypot(m.x - 200, m.y) < TOL), "urcă pe verticală, fără mișcare pe XY");
+    assert.equal(robot.grip, C.GRIP_RELEASE);
   });
 
   it("regula A: gheara se pre-închide la deschiderea de abordare înainte de orice deplasare", async () => {
@@ -111,7 +115,10 @@ describe("Robot (mișcări portate din dofbot.py)", () => {
     assert.deepEqual(events[openAt], { kind: "grip", v: 120 });
     assert.equal(events.filter((e) => e.kind === "grip").length, 1, "gheara nu se redeschide larg");
     const lift = moves(events.slice(openAt));
-    assert.equal(lift.length, C.VERTICAL_STEPS);
+    assert.equal(lift.length, 2 * C.VERTICAL_STEPS, "întâi LIFT_SLOW_DZ încet, apoi restul");
+    const slow = lift.slice(0, C.VERTICAL_STEPS);
+    assert.ok(slow.every((m) => m.t === Math.trunc(C.T_LIFT_SLOW / C.VERTICAL_STEPS)), "primii pași, încet");
+    assert.ok(Math.abs(slow.at(-1)!.z - lift[0]!.z - C.LIFT_SLOW_DZ * (1 - 1 / C.VERTICAL_STEPS)) < TOL);
     for (const p of lift) assert.ok(Math.hypot(p.x - 200, p.y) < TOL, `deviere laterală la z=${p.z}`);
     assert.ok(lift.at(-1)!.z >= C.TRANSIT_MIN_Z - TOL);
     assert.equal(robot.grip, 120);
