@@ -16,3 +16,6 @@ Rezultatele: `ai/docs/calibrare-2026-10-29.md`.
 - `tur_celule.mjs [DZ] [ms] [celule]`: gheara deschisă la DZ mm (implicit 20) peste prindere, pe celule, pentru verificare cu ochiul.
 - `detect.py`: intersecțiile caroiajului cu precizie sub-pixel (linii ajustate cu parabole, ~0,3 px).
 - `aplica_mutarea.mjs`: folosit de `mutare_foaie.py --aplica`.
+- Probe pe braț (2026-10-29 seara): `coborare_lenta.mjs U,V`, `proba_contact_gheara.mjs`, `proba_pick_place.mjs`,
+  `tur_poze_camera.py`; `hand_eye_incercare.py` = calibrarea cameră-braț nereușită, păstrată ca referință.
+- Ce urmează: `ai/docs/next-session-calibrare-testare.md`.
