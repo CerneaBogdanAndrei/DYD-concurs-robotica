@@ -10,10 +10,11 @@ Pentru fiecare mutare:
 4. place pe centrul celulei-țintă măsurat din liniile ei (corectat lateral și ca rotire), înapoi în poza de start și
    verificarea: cât rămâne, în mm, între cub și fiecare linie a celulei, și rotirea cubului;
 5. dacă cubul atinge mijlocul unei linii sau e rotit peste GOOD_YAW_DEG: îl ia din nou de unde a ajuns și îl pune
-   corectat exact cu abaterea măsurată chiar acolo (de cel mult MAX_FIXES ori).
-Cum stă cubul în gheară: degetele se închid lateral (perpendicular pe braț), deci cubul se centrează lateral și se
-aliniază cu degetele; pe direcția brațului rămâne unde era față de gheară. Așa, unde ajunge cubul arată abaterea
-laterală a ghearei pe celula aceea, iar la o corecție pe aceeași celulă abaterea pe direcția brațului se anulează.
+   corectat cu abaterile măsurate pe celula aceea (de cel mult MAX_FIXES ori).
+Cum stă cubul în gheară: degetele se închid lateral (perpendicular pe braț), deci cubul se centrează lateral; unde
+ajunge arată abaterea laterală a ghearei (folosită la pick). La punere se învață abaterea întreagă (pe ambele axe,
+punere - trimitere) și rotirea cu care ajunge cubul, pe fiecare celulă: pe 2026-10-29 cubul a ajuns pe r0c0 cu
+~6,5 mm spre robot și rotit +7..10 grd, iar o rotire a încheieturii se vede pe foaie doar ~70% (gheara e înclinată).
 Rezultatele se scriu după fiecare punere în `traseu_cub.json`.
 
     ai/.venv/bin/python ai/scripts/calib_live/autocal/traseu_cub.py 00 01 02 12 22 21 20 10 11
@@ -38,7 +39,8 @@ PREVIEW = "http://127.0.0.1:8080"
 COL, ROW = 33.0, 32.2  # mm pe celulă (rigla 3,3 x 3,3 cm; din imagine 33 x 32,2)
 BASE_MM = tuple(json.load(open(HERE / "axa_bazei.json"))["base_mm"])  # axa bazei în mm pe foaie (axa_bazei.py)
 UV = np.float32([[0, 0], [3, 0], [3, 3], [0, 3]])
-MAX_FIX_MM = 6.0  # corecția laterală nu trece de atât: peste, e mai probabil o măsurătoare greșită
+MAX_FIX_MM = 8.0  # corecția nu trece de atât: peste, e mai probabil o măsurătoare greșită
+K_WRIST = 0.7  # cât din rotirea comandată a cubului se vede pe foaie (r0c0: -8 grd comandat -> -5,8 grd)
 MAX_FIX_YAW = 8.0  # la fel, corecția de rotire (grd)
 GOOD_MARGIN_MM = 0.0  # cubul bine pus: nu ajunge la mijlocul niciunei linii a celulei
 GOOD_YAW_DEG = 4.0  # ... și e rotit cel mult atât față de linii
@@ -121,12 +123,27 @@ def lateral_dir(uv):
     return -ty / n, tx / n
 
 
+def idw(data, uv):
+    """Ponderile 1/distanța² (mm) ale celulelor măsurate față de uv; aceeași celulă cântărește de ~45 de ori mai mult."""
+    return np.array([1.0 / (((p[0] - uv[0]) * COL) ** 2 + ((p[1] - uv[1]) * ROW) ** 2 + 25.0) for p, _ in data])
+
+
+def predict_xy(data, uv, limit=MAX_FIX_MM):
+    """Abaterea de punere (mm: x spre c2, y spre robot) estimată în uv, la fel ca `predict`, limitată la `limit` mm."""
+    if not data:
+        return np.zeros(2)
+    w = idw(data, uv)
+    e = (w[:, None] * np.array([e for _, e in data])).sum(0) / w.sum()
+    n = float(np.linalg.norm(e))
+    return e if n <= limit else e * limit / n
+
+
 def predict(data, uv, limit=MAX_FIX_MM):
     """Abaterea laterală (mm) estimată în uv: media celulelor măsurate, ponderată cu 1/distanța² (fără extrapolare:
     pe 2026-10-29 un plan prin două celule a dat -9 mm pe r1c0 și a dus cubul pe linie), limitată la ±limit."""
     if not data:
         return 0.0
-    w = np.array([1.0 / (((p[0] - uv[0]) * COL) ** 2 + ((p[1] - uv[1]) * ROW) ** 2 + 25.0) for p, _ in data])
+    w = idw(data, uv)
     e = float(w @ np.array([e for _, e in data]) / w.sum())
     return max(-limit, min(limit, e))
 
@@ -193,7 +210,14 @@ def main():
     route = [(int(s[0]), int(s[1])) for s in sys.argv[1:]]
     loc = load_app_config(ROOT / "ai/config").system.location(LOCATION)
     cube = Cube(loc, status()["cube_mm"])
-    learned, learned_yaw, log = [], [], []
+    learned, learned_xy, learned_yaw, log = [], [], [], []
+
+    def aim(target):
+        """Unde și cu ce rotire se trimite gheara ca cubul să ajungă drept în centrul `target`."""
+        e = predict_xy(learned_xy, target)
+        y0 = predict(learned_yaw, target, 45.0)
+        return [target[0] - e[0] / COL, target[1] - e[1] / ROW], max(-MAX_FIX_YAW, min(MAX_FIX_YAW, -y0 / K_WRIST)), e
+
     start_pose()
     for r, c in route:
         # 1. cubul și caroiajul, din poza de start
@@ -221,12 +245,10 @@ def main():
         grid = lines_uv(o3, img3)
         left, right, top, bottom = cell_box(grid, r, c)
         target = ((left + right) / 2.0, (top + bottom) / 2.0)
-        e_dst = predict(learned, target)
-        yaw_cmd = -predict(learned_yaw, target, MAX_FIX_YAW)
-        place_uv = corrected(target, e_dst)
+        place_uv, yaw_cmd, e_dst = aim(target)
         say(f"  ținta r{r}c{c}: centrul măsurat uv ({target[0]:.3f}; {target[1]:.3f}), celula "
-            f"{(right - left) * COL:.1f} x {(bottom - top) * ROW:.1f} mm; place cu corecția laterală {-e_dst:+.1f} mm, "
-            f"rotire {yaw_cmd:+.1f} grd")
+            f"{(right - left) * COL:.1f} x {(bottom - top) * ROW:.1f} mm; place corectat cu {-e_dst[0]:+.1f} mm pe "
+            f"coloane, {-e_dst[1]:+.1f} mm spre robot, rotire {yaw_cmd:+.1f} grd")
         for fix in range(MAX_FIXES + 1):
             # 4. place și verificarea
             res = post("place", {"location": LOCATION, "uv": place_uv, "yaw_deg": yaw_cmd})
@@ -244,10 +266,11 @@ def main():
             lx, ly = lateral_dir(target)
             ex, ey = (landed[0] - place_uv[0]) * COL, (landed[1] - place_uv[1]) * ROW  # față de unde a fost trimisă gheara
             e_true = ex * lx + ey * ly  # abaterea laterală a ghearei pe celula-țintă
-            d_yaw = wrap45(got["yaw_deg"] - yaw_cmd)  # cât se rotește cubul față de comandă pe celula asta
+            y0 = wrap45(got["yaw_deg"] - K_WRIST * yaw_cmd)  # rotirea cu care ar ajunge cubul la comanda 0
             off = math.hypot((landed[0] - target[0]) * COL, (landed[1] - target[1]) * ROW)
             learned.append((target, e_true))
-            learned_yaw.append((target, d_yaw))
+            learned_xy.append((target, np.array([ex, ey])))
+            learned_yaw.append((target, y0))
             good = ((got["row"], got["col"]) == (r, c) and min(margins.values()) >= GOOD_MARGIN_MM
                     and abs(got["yaw_deg"]) <= GOOD_YAW_DEG)
             say(f"  pus{' (corecția ' + str(fix) + ')' if fix else ''}: {off:.1f} mm de centru, rotit {got['yaw_deg']:+.1f} grd; "
@@ -260,8 +283,8 @@ def main():
             post("beep", {"n": 1})
             if good or fix == MAX_FIXES:
                 break
-            # 5. corecția: pe aceeași celulă abaterea pe direcția brațului se anulează, cea laterală e chiar e_true
-            ok, diag, _, _, _ = grab(cube, got, landed, [(target, e_true)])
+            # 5. corecția: din nou de unde a ajuns, cu abaterile învățate (acum dominate de celula asta)
+            ok, diag, _, _, _ = grab(cube, got, landed, learned)
             say(f"  corectez: pick din nou ({diag}) -> {'prins' if ok else 'CUBUL E ÎNCĂ PE FOAIE'}")
             if not ok:
                 post("beep", {"n": 4})
@@ -269,8 +292,8 @@ def main():
                     sys.exit("Pe foaie e ceva, dar nu cubul clar: opresc cu gheara închisă (poate ține cubul).")
                 post("open_gripper")
                 sys.exit("Pick-ul pentru corecție a ratat: opresc (gheara deschisă, cubul e pe foaie).")
-            place_uv = corrected(target, e_true)
-            yaw_cmd = max(-MAX_FIX_YAW, min(MAX_FIX_YAW, -d_yaw))
+            place_uv, yaw_cmd, e_dst = aim(target)
+            say(f"  pun din nou corectat cu {-e_dst[0]:+.1f} mm pe coloane, {-e_dst[1]:+.1f} mm spre robot, rotire {yaw_cmd:+.1f} grd")
     finals = [m for i, m in enumerate(log) if i + 1 == len(log) or log[i + 1]["fix"] == 0]
     say(f"Gata: {sum(m['good'] for m in finals)}/{len(finals)} mutări bine puse ({len(log) - len(finals)} corecții). "
         f"Rezultate: {OUT}")
