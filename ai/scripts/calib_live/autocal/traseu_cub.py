@@ -10,14 +10,16 @@ Pentru fiecare mutare:
 3. prins = gheara citită strânge ceva (140 comandat: goală 139, cu cubul ~133-136) și, din poza de start, nicio
    celulă ocupată (cubul din gheară se poate vedea jos, peste r2, ca „nesigur”). Gheara goală: 4 bipuri, gheara se
    deschide, cubul e măsurat din nou și pick-ul se reia o dată;
-4. place pe centrul celulei-țintă din liniile salvate (corectat pe ambele axe și ca rotire), înapoi în poza de start și
+4. place pe centrul celulei-țintă din liniile salvate (corectat pe ambele axe), înapoi în poza de start și
    verificarea: cât rămâne, în mm, între cub și fiecare linie a celulei, și rotirea cubului;
-5. dacă cubul atinge mijlocul unei linii sau e rotit peste GOOD_YAW_DEG: îl ia din nou de unde a ajuns și îl pune
-   corectat cu abaterile măsurate pe celula aceea (de cel mult MAX_FIXES ori).
+5. dacă cubul e la peste GOOD_OFF_MM de centru sau intră pe linii mai mult de jumătate din grosimea lor: îl ia din
+   nou de unde a ajuns și îl pune corectat cu abaterile măsurate pe celula aceea (de cel mult MAX_FIXES ori).
 Cum stă cubul în gheară: degetele se închid lateral (perpendicular pe braț), deci cubul se centrează lateral; unde
 ajunge arată abaterea laterală a ghearei (folosită la pick). La punere se învață abaterea întreagă (pe ambele axe,
-punere - trimitere) și rotirea cu care ajunge cubul, pe fiecare celulă: pe 2026-10-29 cubul a ajuns pe r0c0 cu
-~6,5 mm spre robot și rotit +7..10 grd, iar o rotire a încheieturii se vede pe foaie doar ~70% (gheara e înclinată).
+punere - trimitere), pe fiecare celulă: pe 2026-10-29 cubul a ajuns cu ~4 mm spre robot pe r1c1 și ~6 mm pe r0c0.
+Rotirea nu se corectează: cu gheara înclinată, încheietura abia rotește cubul (`proba_rotire.py` pe r1c1: ~0,23 din
+comandă) și îl mută lateral (-4,3 mm la -10 grd). Cubul păstrează cam rotirea brațului: pe coloanele c0 și c2 baza e
+rotită ~7 grd, deci cubul ajunge rotit cam atât.
 Rezultatele se scriu după fiecare punere în `traseu_cub.json`.
 
     ai/.venv/bin/python ai/scripts/calib_live/autocal/traseu_cub.py 00 01 02 12 22 21 20 10 11
@@ -46,10 +48,13 @@ REF = HERE / "ref/observe_small"  # imaginea foii goale din poza de start (mutar
 POSE_PX = 6.0  # colțurile mai departe de atât față de referință (~1,6 mm): poza de start nu s-a repetat (de obicei 1-3 px)
 GRIP_EMPTY = 2  # gheara citită la cel mult atât sub comandă = goală
 MAX_FIX_MM = 8.0  # corecția nu trece de atât: peste, e mai probabil o măsurătoare greșită
-K_WRIST = 0.7  # cât din rotirea comandată a cubului se vede pe foaie (r0c0: -8 grd comandat -> -5,8 grd)
-MAX_FIX_YAW = 8.0  # la fel, corecția de rotire (grd)
-GOOD_MARGIN_MM = 0.0  # cubul bine pus: nu ajunge la mijlocul niciunei linii a celulei
-GOOD_YAW_DEG = 4.0  # ... și e rotit cel mult atât față de linii
+K_WRIST = 0.23  # cât din rotirea comandată a cubului se vede pe foaie (proba_rotire.py pe r1c1, 2026-10-29)
+MAX_FIX_YAW = 0.0  # corecția de rotire: oprită (vezi mai sus)
+GOOD_OFF_MM = 2.0  # cubul bine pus: centrul lui la cel mult atât de centrul celulei
+GOOD_MARGIN_MM = -0.4  # ... și intră pe linii (0,8 mm) cel mult jumătate din grosimea lor
+# Abaterea de punere măsurată înainte (punere - trimitere, mm: x spre c2, y spre robot), ca punct de plecare:
+# r1c1 din proba_rotire.py (comanda 0, de 2 ori), r0c0 din traseul de la 23:33 (2 puneri cu comanda 0).
+PRIOR_XY = [((1.5, 1.5), (-0.2, 4.25)), ((0.5, 0.5), (-0.7, 6.0))]
 MAX_FIXES = 2
 OUT = HERE / "traseu_cub.json"
 
@@ -248,7 +253,8 @@ def main():
     route = [(int(s[0]), int(s[1])) for s in sys.argv[1:]]
     loc = load_app_config(ROOT / "ai/config").system.location(LOCATION)
     cube = Cube(loc, status()["cube_mm"])
-    learned, learned_xy, learned_yaw, log = [], [], [], []
+    learned, learned_yaw, log = [], [], []
+    learned_xy = [(uv, np.array(e)) for uv, e in PRIOR_XY]
 
     def aim(target):
         """Unde și cu ce rotire se trimite gheara ca cubul să ajungă drept în centrul `target`."""
@@ -307,11 +313,10 @@ def main():
             learned.append((target, e_true))
             learned_xy.append((target, np.array([ex, ey])))
             learned_yaw.append((target, y0))
-            good = ((got["row"], got["col"]) == (r, c) and min(margins.values()) >= GOOD_MARGIN_MM
-                    and abs(got["yaw_deg"]) <= GOOD_YAW_DEG)
+            good = (got["row"], got["col"]) == (r, c) and off <= GOOD_OFF_MM and min(margins.values()) >= GOOD_MARGIN_MM
             say(f"  pus{' (corecția ' + str(fix) + ')' if fix else ''}: {off:.1f} mm de centru, rotit {got['yaw_deg']:+.1f} grd; "
                 "până la linii: " + ", ".join(f"{k} {v:+.1f}" for k, v in margins.items())
-                + f" mm -> {'BINE' if good else 'atinge linia / rotit'}; abaterea laterală a ghearei aici {e_true:+.1f} mm")
+                + f" mm -> {'BINE' if good else 'DE CORECTAT'}; abaterea laterală a ghearei aici {e_true:+.1f} mm")
             log.append({"cell": f"r{r}c{c}", "from": f"r{src_cell[0]}c{src_cell[1]}", "fix": fix, "target_uv": target,
                         "sent_uv": place_uv, "yaw_cmd": yaw_cmd, "landed_uv": landed, "yaw": got["yaw_deg"],
                         "off_mm": off, "margins_mm": margins, "lateral_mm": e_true, "good": good})
