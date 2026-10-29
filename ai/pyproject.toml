@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "brain"
+version = "0.1.0"
+description = "Subsistemul Brain (percepție, memorie, planificare, orchestrare) pentru Yahboom DOFBOT — CRI 2026"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "numpy>=1.19",
+    "opencv-contrib-python>=4.5",
+    "PyYAML>=5.3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+brain = "brain.cli.main:main"
+
+[tool.setuptools.packages.find]
+include = ["brain*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "hardware: necesită hardware real (braț, cameră); sărit implicit",
+]
+addopts = "-m \"not hardware\""

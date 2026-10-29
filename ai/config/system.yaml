@@ -1,0 +1,158 @@
+# Configurația sistemului Brain. Unități: lungimi în mm, unghiuri servo în grade, imagini în px, timp în s.
+# Valorile marcate NECALIBRAT sunt presupuneri inițiale și trebuie măsurate fizic.
+schema_version: 2
+
+cube:
+  size_mm: 30.0               # NECALIBRAT (nominal din regulament)
+  calibrated: false
+
+# Șabloanele 3x3 de pe foaia A4. Numele TREBUIE să coincidă cu locurile calibrate în serviciul de
+# mișcare (npm run calib -- celule NUME), iar observe_pose cu pozele învățate (npm run calib -- poza NUME).
+locations:
+  small:
+    rows: 3
+    cols: 3
+    cell_mm: 34.0             # NECALIBRAT: latura celulei, de măsurat cu rigla
+    line_width_mm: 2.0        # NECALIBRAT
+    orientation_quarter_turns: 0
+    observe_pose: observe_small
+    camera_height_mm: 250.0   # NECALIBRAT: înălțimea camerei peste masă în poza de observare (paralaxă)
+    nadir_uv: [1.5, 1.5]      # punctul de sub cameră, în coordonate de celulă (implicit centrul grilei)
+    expected_corners_px: null # opțional: colțurile grilei în imagine; alege grila corectă când se văd mai multe
+  medium:
+    rows: 3
+    cols: 3
+    cell_mm: 40.0             # NECALIBRAT
+    line_width_mm: 2.5        # NECALIBRAT
+    orientation_quarter_turns: 0
+    observe_pose: observe_medium
+    camera_height_mm: 250.0   # NECALIBRAT
+    nadir_uv: [1.5, 1.5]
+    expected_corners_px: null
+  large:
+    rows: 3
+    cols: 3
+    cell_mm: 48.0             # NECALIBRAT
+    line_width_mm: 2.5        # NECALIBRAT
+    orientation_quarter_turns: 0
+    observe_pose: observe_large
+    camera_height_mm: 280.0   # NECALIBRAT
+    nadir_uv: [1.5, 1.5]
+    expected_corners_px: null
+
+vision:
+  rectified_cell_px: 100      # imaginea redresată: 300 x 300 px pentru 3 x 3
+  detection_method: lines     # lines (principal) | aruco (opțional, dacă regulamentul permite markeri)
+  frames_to_aggregate: 5
+  min_valid_frames: 3
+
+  quality:                    # praguri pe imaginea în tonuri de gri (0..255)
+    min_mean_brightness: 40
+    max_mean_brightness: 235
+    max_saturated_fraction: 0.25
+    max_dark_fraction: 0.6
+    min_contrast: 12
+
+  lines:
+    adaptive_block_fraction: 0.06   # fereastra pragului adaptiv, ca fracție din latura mică a imaginii
+    adaptive_c: 45                  # cât de întunecat față de media locală trebuie să fie un pixel de linie
+    dark_chroma_max: 50             # max(B,G,R) - min(B,G,R) pentru „negru” (exclude cuburile colorate)
+    min_component_fraction: 0.004
+
+  aruco:                      # folosit doar dacă detection_method: aruco
+    dictionary: DICT_4X4_50
+    marker_ids: [0, 1, 2, 3]  # ordinea TL, TR, BR, BL
+    marker_centers_mm: [[-15.0, -15.0], [135.0, -15.0], [135.0, 135.0], [-15.0, 135.0]]  # NECALIBRAT
+    require_line_structure: false
+
+  geometry:
+    min_area_fraction: 0.05
+    border_margin_px: 4
+    max_opposite_side_ratio: 1.8
+    max_adjacent_side_ratio: 2.0
+    min_interior_angle_deg: 50
+    max_interior_angle_deg: 130
+    max_condition_number: 200
+    min_structure_score: 0.35
+    min_line_support: 0.6     # fiecare linie a grilei trebuie să aibă tuș pe ≥60% din porțiunea neacoperită
+
+  white_balance:              # compensare software pe albul mesei
+    enabled: true
+    max_gain: 1.6
+    min_reference_pixels: 2000
+
+  cells:                      # praguri pe imaginea redresată
+    roi_margin_px: 12
+    min_component_px: 120
+    occupied_min_fraction: 0.12   # aria colorată / aria nominală a cubului
+    empty_max_fraction: 0.04
+    edge_gradient_threshold: 35   # magnitudine Sobel; o celulă „goală” cu multe muchii devine unknown
+    edge_density_max: 0.03
+    dark_object_contrast: 70      # pixeli cu atât mai întunecați decât masa → obiect (ex. pictogramă)
+    dark_object_min_px: 25
+    faint_saturation_min: 30      # saturație peste masa albă, dar sub pragul de clasificare din colors.yaml
+    faint_fraction_max: 0.15      # peste această fracție din ROI → obiect decolorat → unknown
+    off_center_px: 30
+    ring_width_fraction: 0.18
+    min_color_pixels: 60
+    yaw_min_confidence: 0.3       # sub prag, yaw-ul e raportat ca necunoscut (None)
+    top_face_full_min_fill: 0.75
+    top_face_icon_max_fill: 0.6
+
+memory:
+  path: data/memory/scene_state.json
+
+arm:
+  backend: sim                # sim (MockArm + lume simulată) | team (serviciul de mișcare al colegilor, HTTP)
+  team_url: http://127.0.0.1:8765
+  timeout_s: 60               # recomandat în CONTRACT_BRAT.md
+  calib_json: null            # opțional: calib.json al serviciului, pentru costul unghiular estimat
+  settle_s: 0.6               # așteptare după go_pose înainte de captură (SETTLE_S în referință)
+
+proximity:
+  enabled: false              # true doar după montarea și verificarea senzorului
+  model: "HC-SR04 (presupus din intervalul 2-400 cm; de confirmat)"
+  min_range_mm: 20
+  max_range_mm: 4000
+  resolution_mm: 3
+  max_rate_hz: 16             # ~60 ms între măsurători (recomandarea uzuală pentru HC-SR04)
+  beam_half_angle_deg: 15
+  samples: 5                  # mediana a 5 citiri
+  mount: coaxial              # coaxial (pe gheară, privește în jos printre fălci) | none
+  sensor_above_jaw_mm: null   # NECALIBRAT: distanța pe verticală dintre senzor și vârful fălcilor
+  hover_above_target_mm: 45   # HOVER_DZ al serviciului: după pick/place gheara stă la 45 mm deasupra țintei
+  tolerance_mm: 12
+  required: false             # true: fără senzor funcțional, execuția se oprește
+  stop_distance_mm: null      # prag critic NEVALIDAT; null = dezactivat
+  calibrated: false
+
+timing:                       # NEMĂSURAT: estimări inițiale, înlocuiți-le cu `python -m brain report timings`
+  task_limit_s: 300
+  reserve_s: 20
+  observe_s: 2.5              # go_pose + 0,6 s așezare + captură + analiză
+  pick_s: 5.0                 # referința estimează ~9-10 s pentru prindere + plasare
+  place_s: 5.0
+  measured: false
+
+planning:
+  max_tower_level: 4          # NECALIBRAT: nivelurile 0..4 (turn de 5 cuburi, ca în exemplul S2); serviciul acceptă 0..8,
+                              # în simularea lui sunt accesibile 0..6 (lungimi nemăsurate) — de reverificat pe braț
+  min_confidence: 0.6         # cuburile cu încredere mai mică nu sunt manipulate
+  match_top_face: prefer      # prefer | require | ignore (fața de sus a cubului ales vs. cea memorată)
+  staging_locations: [small, medium, large]   # unde se pot muta cuburile care blochează
+  max_pick_attempts: 2        # pe același cub, apoi e marcat neprins și ocolit
+  camera_verify: each_move    # each_move (reobservare după fiecare mutare) | end
+  max_observe_attempts: 3
+  cost:                       # costul Greedy (grade estimate de mișcare)
+    radial_deg_per_mm: 0.5
+    adjacent_stack_penalty_deg: 20
+    location_switch_deg: 30   # folosit doar ca substitut, când geometria robotului nu e cunoscută
+
+# Previzualizarea camerei din browser (Pi fără ecran): python -m brain camera preview
+preview:
+  host: 0.0.0.0               # 0.0.0.0 = vizibil din rețeaua locală (doar citire); 127.0.0.1 = doar pe Pi
+  port: 8080
+  max_fps: 10                 # limitează fluxul live (procesorul Pi-ului e folosit și de analiză)
+  jpeg_quality: 80
+  analyze_interval_s: 1.0     # cât de des se reface analiza adnotată (grila + celulele)
+  save_dir: out/preview       # ultimele imagini (brută + adnotată) și observația, suprascrise la fiecare analiză

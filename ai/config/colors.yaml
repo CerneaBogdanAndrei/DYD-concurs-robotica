@@ -1,0 +1,18 @@
+# Clasificarea culorilor în spațiul HSV, convenția OpenCV: H în [0, 179], S și V în [0, 255].
+# NECALIBRAT: valori setate pe scenele sintetice. Se recalibrează cu camera reală (Etapa 1).
+schema_version: 1
+calibrated: false
+
+saturation_min: 70      # sub acest prag pixelul e considerat alb/gri/negru
+value_min: 50
+min_dominance: 0.6      # fracția minimă de pixeli din inel care trebuie să voteze aceeași culoare
+
+colors:
+  red:
+    hue_ranges: [[0, 10], [165, 179]]
+  yellow:
+    hue_ranges: [[18, 38]]
+  green:
+    hue_ranges: [[42, 88]]
+  blue:
+    hue_ranges: [[92, 132]]

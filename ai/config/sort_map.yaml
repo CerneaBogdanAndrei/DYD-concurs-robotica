@@ -1,0 +1,18 @@
+# Sarcina 3: harta cu zone de sortare.
+# Fiecare zonă = un loc de tip „point” din calib.json al serviciului de mișcare (npm run calib -- zona NUME).
+# NECALIBRAT: harta reală nu e încă disponibilă; corespondența formă de pe hartă → culoare e de confirmat.
+schema_version: 1
+calibrated: false
+
+max_level: 3                  # cuburile de aceeași culoare se stivuiesc pe punctul zonei, nivelurile 0..3
+unknown_color_policy: leave   # leave (rămân pe loc) | staging (mutate pe un loc liber din staging_locations)
+
+zones:
+  zone_red:
+    accepts: [red]
+  zone_yellow:
+    accepts: [yellow]
+  zone_green:
+    accepts: [green]
+  zone_blue:
+    accepts: [blue]
