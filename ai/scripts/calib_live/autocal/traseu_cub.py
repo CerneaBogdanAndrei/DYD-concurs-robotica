@@ -32,10 +32,9 @@ from brain.perception.grid_measure import measure_lines  # noqa: E402
 
 PREVIEW = "http://127.0.0.1:8080"
 COL, ROW = 33.0, 32.2  # mm pe celulă (rigla 3,3 x 3,3 cm; din imagine 33 x 32,2)
-BASE_MM = (57.3, 309.5)  # axa bazei în mm pe foaie (axa_bazei.py, 2026-10-29)
+BASE_MM = tuple(json.load(open(HERE / "axa_bazei.json"))["base_mm"])  # axa bazei în mm pe foaie (axa_bazei.py)
 UV = np.float32([[0, 0], [3, 0], [3, 3], [0, 3]])
-# Abaterea laterală măsurată înainte (2026-10-29 ~22:35, pick/place pe r1c1 fără corecție): +9,8 mm spre dreapta.
-PRIOR = [((1.5, 1.5), 9.8)]
+MAX_FIX_MM = 6.0  # corecția laterală nu trece de atât: peste, e mai probabil o măsurătoare greșită
 OUT = HERE / "traseu_cub.json"
 
 
@@ -115,14 +114,13 @@ def lateral_dir(uv):
 
 
 def predict(data, uv):
-    """Abaterea laterală (mm) estimată în uv: plan e = a + b(u - 1,5) + c(v - 1,5) prin celulele măsurate.
-    Caroiajul serviciului și foaia sunt ambele afine în uv, deci abaterea e aproape afină. Cu mai puțin de 3 celule,
-    cea mai mică pantă care le potrivește (lstsq)."""
+    """Abaterea laterală (mm) estimată în uv: media celulelor măsurate, ponderată cu 1/distanța² (fără extrapolare:
+    pe 2026-10-29 un plan prin două celule a dat -9 mm pe r1c0 și a dus cubul pe linie), limitată la ±MAX_FIX_MM."""
     if not data:
         return 0.0
-    A = np.array([[1.0, p[0] - 1.5, p[1] - 1.5] for p, _ in data])
-    k = np.linalg.lstsq(A, np.array([e for _, e in data]), rcond=None)[0]
-    return float(k[0] + k[1] * (uv[0] - 1.5) + k[2] * (uv[1] - 1.5))
+    w = np.array([1.0 / (((p[0] - uv[0]) * COL) ** 2 + ((p[1] - uv[1]) * ROW) ** 2 + 25.0) for p, _ in data])
+    e = float(w @ np.array([e for _, e in data]) / w.sum())
+    return max(-MAX_FIX_MM, min(MAX_FIX_MM, e))
 
 
 def corrected(uv, e_mm):
@@ -170,7 +168,7 @@ def main():
         grid = lines_uv(o3, img3)
         left, right, top, bottom = cell_box(grid, r, c)
         target = ((left + right) / 2.0, (top + bottom) / 2.0)
-        e_dst = predict(learned or PRIOR, target)
+        e_dst = predict(learned, target)
         place_uv = corrected(target, e_dst)
         say(f"  ținta r{r}c{c}: centrul măsurat uv ({target[0]:.3f}; {target[1]:.3f}), celula "
             f"{(right - left) * COL:.1f} x {(bottom - top) * ROW:.1f} mm; place cu corecția laterală {-e_dst:+.1f} mm")
