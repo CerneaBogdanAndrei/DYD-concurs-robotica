@@ -2,37 +2,37 @@
  "location": "small",
  "rows": 3,
  "cols": 3,
- "captured_at": "2026-10-29T18:49:04Z",
+ "captured_at": "2026-10-29T21:13:05Z",
  "actionable": true,
  "reasons": [],
- "processing_ms": 682.67,
+ "processing_ms": 724.51,
  "geometry": {
   "method": "lines",
   "ok": true,
   "corners_px": [
    [
-    127.11,
-    31.05
+    147.45,
+    42.9
    ],
    [
-    498.94,
-    34.05
+    517.48,
+    52.62
    ],
    [
-    527.21,
-    404.7
+    541.64,
+    420.7
    ],
    [
-    76.08,
-    397.43
+    94.27,
+    407.95
    ]
   ],
-  "structure_score": 1.0,
+  "structure_score": 0.9996,
   "metrics": {
-   "line_residual_cells": 0.0271,
-   "condition_number": 1.225,
-   "structure_score": 1.0,
-   "min_line_support": 1.0,
+   "line_residual_cells": 0.027,
+   "condition_number": 1.22,
+   "structure_score": 0.9996,
+   "min_line_support": 0.9965,
    "lines_measured": 8.0
   }
  },
@@ -40,9 +40,9 @@
   "frames_total": 5,
   "frames_valid": 5,
   "flags": [],
-  "mean_brightness": 181.43,
-  "contrast": 35.19,
-  "sharpness": 587.0
+  "mean_brightness": 174.55,
+  "contrast": 34.12,
+  "sharpness": 577.62
  },
  "cells": [
   {
@@ -125,7 +125,7 @@
    "row": 1,
    "col": 1,
    "occupancy": "empty",
-   "occupancy_confidence": 1.0,
+   "occupancy_confidence": 0.9466,
    "color": "unknown",
    "color_confidence": 0.0,
    "yaw_deg": null,
@@ -135,9 +135,9 @@
    "reasons": [],
    "metrics": {
     "colored_fraction": 0.0,
-    "edge_density": 0.0,
+    "edge_density": 0.0064,
     "dark_px": 0.0,
-    "faint_fraction": 0.0
+    "faint_fraction": 0.0009
    }
   },
   {
@@ -182,7 +182,7 @@
    "row": 2,
    "col": 1,
    "occupancy": "empty",
-   "occupancy_confidence": 1.0,
+   "occupancy_confidence": 0.9971,
    "color": "unknown",
    "color_confidence": 0.0,
    "yaw_deg": null,
@@ -192,7 +192,7 @@
    "reasons": [],
    "metrics": {
     "colored_fraction": 0.0,
-    "edge_density": 0.0,
+    "edge_density": 0.0003,
     "dark_px": 0.0,
     "faint_fraction": 0.0
    }
@@ -218,9 +218,9 @@
   }
  ],
  "read_joints": [
-  89,
   90,
-  29,
+  90,
+  30,
   3,
   89
  ]
