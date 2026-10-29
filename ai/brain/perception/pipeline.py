@@ -37,8 +37,30 @@ from brain.perception.photometry import (
 
 REASON_TOO_FEW_FRAMES = "too_few_valid_frames"
 MIN_LINES_MEASURED = 2
-RECTIFIED_MARGIN_CELLS = 0.3
+RECTIFIED_MARGIN_CELLS = 0.3  # minimul; cu camera oblică, cât cere paralaxa (`rectified_margin_cells`)
+MARGIN_YAW_DEG = 15.0  # fața de sus a unui cub rotit până la atât încape în margine
 RESIDUAL_TIE_FACTOR = 1.1  # potriviri ale aceleiași grile cu reziduuri la sub 10% una de alta sunt echivalente
+
+
+def rectified_margin_cells(loc: LocationConfig, cube_mm: float) -> float:
+    """Marginea redresării, în celule: cât iese peste contur fața de sus a unui cub de pe o celulă de margine.
+
+    Fața de sus e mărită cu H/(H-h) și împinsă departe de nadir; cu nadirul în afara foii (camera de lângă
+    bază, înclinată), fața cubului de pe rândul cel mai depărtat trece cu mult peste linia de contur.
+    """
+    scale = loc.camera_height_mm / (loc.camera_height_mm - cube_mm)
+    yaw = np.radians(MARGIN_YAW_DEG)
+    half = cube_mm / loc.cell_mm / 2.0 * float(np.cos(yaw) + np.sin(yaw))
+    nu, nv = loc.nadir_uv
+    over = 0.0
+    for r in range(loc.rows):
+        for c in range(loc.cols):
+            for du in (-half, half):
+                for dv in (-half, half):
+                    u = nu + (c + 0.5 + du - nu) * scale
+                    v = nv + (r + 0.5 + dv - nv) * scale
+                    over = max(over, -u, u - loc.cols, -v, v - loc.rows)
+    return max(RECTIFIED_MARGIN_CELLS, over + 0.05)
 
 
 @dataclass
@@ -162,10 +184,13 @@ class VisionPipeline:
 
         cell_px = vision.rectified_cell_px
         # Marginea în jurul grilei: cuburile din celulele de pe contur pot depăși linia (paralaxă, rotație).
-        margin = int(round(RECTIFIED_MARGIN_CELLS * cell_px))
+        margin = int(round(rectified_margin_cells(loc, self.system.cube.size_mm) * cell_px))
         shift = np.array([[1.0, 0.0, margin], [0.0, 1.0, margin], [0.0, 0.0, 1.0]])
         size = (loc.cols * cell_px + 2 * margin, loc.rows * cell_px + 2 * margin)
         rectified = geo.warp(aggregated, shift @ located.homography, size)
+        # Ce acoperă cadrul camerei: o față tăiată de marginea cadrului nu are voie să pară întreagă.
+        inside = cv2.warpPerspective(np.full(aggregated.shape[:2], 255, np.uint8), shift @ located.homography, size,
+                                     flags=cv2.INTER_NEAREST, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
         gains = None
         if vision.white_balance.enabled:
             reference = white_reference_mask(rectified)
@@ -176,8 +201,10 @@ class VisionPipeline:
                 rectified = apply_gains(rectified, gains)
         turns = loc.orientation_quarter_turns
         logical = np.ascontiguousarray(np.rot90(rectified, k=turns)) if turns else rectified
+        if turns:
+            inside = np.ascontiguousarray(np.rot90(inside, k=turns))
         analyzer = self._analyzer(loc.name)
-        cell_results = measure_cubes(analyzer.analyze(logical, loc.rows, loc.cols, margin), analyzer, loc,
+        cell_results = measure_cubes(analyzer.analyze(logical, loc.rows, loc.cols, margin, inside), analyzer, loc,
                                      self.system.cube.size_mm, cell_px)
 
         observation = GridObservation(

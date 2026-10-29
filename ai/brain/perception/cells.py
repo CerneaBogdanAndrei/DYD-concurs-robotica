@@ -118,6 +118,7 @@ class CellAnalyzer:
         self.top_px = self.cube_px * self.top_scale  # latura feței de sus în imaginea redresată
         self._margin = 0
         self._nadir: Optional[np.ndarray] = None
+        self._outside: Optional[np.ndarray] = None
         self.ignored_side_faces = 0
 
     def base_uv(self, uv_top: Tuple[float, float]) -> Tuple[float, float]:
@@ -128,8 +129,11 @@ class CellAnalyzer:
         nu, nv = self.nadir_uv
         return (nu + (uv_top[0] - nu) / self.top_scale, nv + (uv_top[1] - nv) / self.top_scale)
 
-    def analyze(self, rectified: np.ndarray, rows: int, cols: int, margin: int = 0) -> List[CellResult]:
-        """`margin`: px de imagine redresată în jurul grilei (cuburile de pe margine pot depăși conturul)."""
+    def analyze(
+        self, rectified: np.ndarray, rows: int, cols: int, margin: int = 0, inside: Optional[np.ndarray] = None
+    ) -> List[CellResult]:
+        """`margin`: px de imagine redresată în jurul grilei (cuburile de pe margine pot depăși conturul).
+        `inside`: unde ajunge cadrul camerei în imaginea redresată (0 = în afara lui); lipsă = peste tot."""
         cfg = self.config
         self._margin = int(margin)
         self._nadir = None
@@ -139,6 +143,11 @@ class CellAnalyzer:
         mask = self.classifier.colored_mask(hsv)
         kernel = np.ones((3, 3), np.uint8)
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+        # Dincolo de cadrul camerei, redresarea repetă pixelii de pe margine: acolo nu se vede nimic.
+        self._outside = None
+        if inside is not None and not inside.all():
+            mask[inside == 0] = 0
+            self._outside = cv2.dilate((inside == 0).astype(np.uint8), np.ones((5, 5), np.uint8)) > 0
         # Componentele se calculează separat pe clase de nuanță: cuburi vecine de culori diferite nu se
         # contopesc niciodată; pentru aceeași culoare rămâne separarea după nuclee.
         classes = np.where(mask > 0, self.classifier.hue_classes(hsv), -2)
@@ -453,12 +462,15 @@ class CellAnalyzer:
         exclude = cv2.dilate(others, np.ones((7, 7), np.uint8)) > 0 if splits else np.zeros(blob.shape, dtype=bool)
         # Un blob tăiat de marginea imaginii are o latură artificială: marginea nu participă la orientare.
         clipped = ys.min() <= 1 or xs.min() <= 1 or ys.max() >= height - 2 or xs.max() >= width - 2
+        clipped = clipped or (self._outside is not None and bool(self._outside[ys, xs].any()))
         if clipped:
             border = np.zeros(blob.shape, dtype=bool)
             border[: max(0, 4 - wy0), :] = True
             border[:, : max(0, 4 - wx0)] = True
             border[max(0, height - 4 - wy0):, :] = True
             border[:, max(0, width - 4 - wx0):] = True
+            if self._outside is not None:
+                border |= cv2.dilate(self._outside[wy0:wy1, wx0:wx1].astype(np.uint8), np.ones((3, 3), np.uint8)) > 0
             exclude = exclude | border
         theta, concentration = dominant_orientation(filled, exclude)
         yaw = normalize_yaw_deg(-theta)  # axa y a imaginii e în jos: sensul antiorar pe ecran are semn opus

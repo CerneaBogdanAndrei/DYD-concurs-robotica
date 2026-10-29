@@ -7,6 +7,7 @@ import pytest
 from brain.domain.cube import Color, Occupancy, TopFace, normalize_yaw_deg, yaw_difference_deg
 from brain.domain.grid import GridCoord
 from brain.perception.cells import (
+    REASON_CLIPPED,
     REASON_DARK_OBJECT,
     REASON_FAINT_COLOR,
     REASON_SEPARATED,
@@ -179,3 +180,29 @@ def test_without_camera_geometry_the_oblique_cube_lands_in_the_wrong_cell(app_co
     _oblique_cube(image, (1, 1), _bgr(0, 200, 190), _bgr(110, 200, 150), app_config.system.cube_px("medium"))
     cells = _by_coord(analyzer.analyze(image, 3, 3))
     assert cells[(0, 1)].occupancy is Occupancy.OCCUPIED  # de aceea e nevoie de nadir_uv și camera_height_mm
+
+
+def test_cube_cut_by_the_camera_frame_is_clipped_not_whole(analyzer):
+    # Dincolo de cadrul camerei, redresarea repetă marginea: fața tăiată acolo ar părea întreagă.
+    board = _board()
+    _cube(board, (0, 1), 0.0, _bgr(0, 200, 190))  # fața de sus începe la y = 12,5
+    seen = np.full(board.shape[:2], 255, np.uint8)
+    seen[:30] = 0  # camera nu vede primii 30 px
+    whole = _by_coord(analyzer.analyze(board, 3, 3))[(0, 1)]
+    cut = _by_coord(analyzer.analyze(board, 3, 3, inside=seen))[(0, 1)]
+    assert whole.occupancy is Occupancy.OCCUPIED and REASON_CLIPPED not in whole.reasons
+    assert cut.occupancy is Occupancy.OCCUPIED and REASON_CLIPPED in cut.reasons
+    assert cut.uv_top[1] > whole.uv_top[1] + 0.05  # centrul doar al părții văzute
+
+
+def test_rectified_margin_covers_the_far_row_of_an_oblique_camera(app_config):
+    from dataclasses import replace
+
+    from brain.perception.pipeline import RECTIFIED_MARGIN_CELLS, rectified_margin_cells
+
+    loc = app_config.system.location("small")
+    # camera de lângă bază, cu nadirul dincolo de rândul r2: fața cubului de pe r0 iese cu ~0,8 celule peste contur
+    behind = replace(loc, cell_mm=33.0, camera_height_mm=163.7, nadir_uv=(1.6, 3.67))
+    assert 0.8 < rectified_margin_cells(behind, 29.0) < 1.0
+    above = replace(loc, cell_mm=43.0, camera_height_mm=250.0, nadir_uv=(1.5, 1.5))
+    assert rectified_margin_cells(above, 29.0) == RECTIFIED_MARGIN_CELLS
