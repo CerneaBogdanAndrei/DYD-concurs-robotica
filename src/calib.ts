@@ -5,7 +5,7 @@
 //     - "grid":  caroiaj 3x3 învățat pe celule (source, dest, ...)
 //     - "point": o singură poziție învățată (zone_red, ...)
 
-import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { Grid, type Vec3 } from "./grid.js";
 
 export interface GridSite {
@@ -39,6 +39,20 @@ export function loadCalib(path: string): Calib {
   if (!existsSync(path)) return emptyCalib();
   const raw = JSON.parse(readFileSync(path, "utf8")) as Partial<Calib>;
   return { poses: raw.poses ?? {}, sites: raw.sites ?? {} };
+}
+
+/** Calibrarea recitită doar când fișierul s-a schimbat (ex. după `npm run calib` cu serverul pornit). */
+export function calibLoader(path: string): () => Calib {
+  let mtime = -1;
+  let cached = emptyCalib();
+  return () => {
+    const m = existsSync(path) ? statSync(path).mtimeMs : 0;
+    if (m !== mtime) {
+      cached = loadCalib(path);
+      mtime = m;
+    }
+    return cached;
+  };
 }
 
 /** Scriere atomică: un fișier pe jumătate scris ar pierde toată calibrarea. */

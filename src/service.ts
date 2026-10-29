@@ -109,6 +109,7 @@ export class ArmService {
   }
 
   async goPose(name: string, speed: Speed = "fast"): Promise<void> {
+    if (typeof name !== "string" || name === "") throw new ArgumentError("name lipsește");
     if (speed !== "fast" && speed !== "slow") throw new ArgumentError(`speed invalid: ${speed}`);
     const t = speed === "slow" ? 2 * C.T_MOVE : C.T_MOVE;
     if (name === "home") {
