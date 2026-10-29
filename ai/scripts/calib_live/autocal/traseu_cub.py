@@ -49,15 +49,20 @@ REF = HERE / "ref/observe_small"  # imaginea foii goale din poza de start (mutar
 POSE_PX = 6.0  # colțurile mai departe de atât față de referință (~1,6 mm): poza de start nu s-a repetat (de obicei 1-3 px)
 GRIP_EMPTY = 2  # gheara citită la cel mult atât sub comandă = goală
 MAX_FIX_MM = 8.0  # corecția nu trece de atât: peste, e mai probabil o măsurătoare greșită
-K_WRIST = 0.23  # cât din rotirea comandată a cubului se vede pe foaie, la început (proba_rotire.py pe r1c1)
-K_RANGE = (0.15, 1.0)  # k învățat rămâne între acestea
+K_WRIST = 0.5  # cât din rotirea comandată a cubului se vede pe foaie, la început: 0,54 pe r1c1 cu eliberarea de
+# acum (2026-10-30; 0,23 cu eliberarea de sus); geometric ~0,77 la gheara înclinată -50 grd
+K_RANGE = (0.3, 1.0)  # k învățat rămâne între acestea
+YAW_STEP = 0.7  # din rotirea calculată se comandă doar atât: punerea are ~2 grd zgomot, un pas întreg ar oscila
 MAX_FIX_YAW = 25.0  # rotirea comandată a încheieturii, cel mult (grd)
 GOOD_OFF_MM = 2.0  # cubul bine pus: centrul lui la cel mult atât de centrul celulei
 GOOD_MARGIN_MM = -0.4  # ... intră pe linii (0,8 mm) cel mult jumătate din grosimea lor
-YAW_TOL = 1.5  # ... și e rotit cel mult atât (camera: ~0,5 grd între două analize)
-# Abaterea de punere de la început (punere - trimitere, mm: x spre c2, y spre robot): echipa, pe r1c1, 2026-10-30:
-# cubul trebuia pus cu 6 mm mai spre r0c1 și 1 mm mai spre r1c2 (camera văzuse +4,6 mm spre robot, -0,5 mm).
-PRIOR_XY = [((1.5, 1.5), (-1.0, 6.0))]
+YAW_TOL = 3.0  # ... și e rotit cel mult atât. Camera: ±0,5 grd pe un cub care stă (6 analize); punerea însă rotește
+# cubul la întâmplare cu ~±2 grd (r1c1, 2026-10-30: +0,6, +2,5 cu încheietura la 0), deci sub ~3 grd o nouă punere
+# nu îl îndreaptă, doar îl rotește altfel
+# Abaterea de punere de la început (punere - trimitere, mm: x spre c2, y spre robot): r1c1, 2026-10-30 ~00:15, cu
+# eliberarea de acum (coboară până atinge foaia): 2 puneri cu încheietura la 0. Cu eliberarea de sus cubul ajungea
+# cu 4-6 mm spre robot; echipa măsurase 6 mm, corecție care acum îl ducea cu 7 mm prea departe.
+PRIOR_XY = [((1.5, 1.5), (-2.4, -0.6))]
 MAX_FIXES = 3
 OUT = HERE / "traseu_cub.json"
 
@@ -338,7 +343,7 @@ def main():
             lx, ly = lateral_dir(target)
             ex, ey = (landed[0] - place_uv[0]) * COL, (landed[1] - place_uv[1]) * ROW  # față de unde a fost trimisă gheara
             e_true = ex * lx + ey * ly  # abaterea laterală a ghearei pe celula-țintă
-            if fix and abs(yaw_cmd - prev_cmd) >= 3.0:  # aceeași celulă, altă rotire comandată: cât s-a rotit cubul
+            if fix and abs(yaw_cmd - prev_cmd) >= 5.0:  # aceeași celulă, altă rotire comandată: cât s-a rotit cubul
                 k_pairs.append(wrap45(got["yaw_deg"] - prev_yaw) / (yaw_cmd - prev_cmd))
             prev_cmd, prev_yaw = yaw_cmd, got["yaw_deg"]
             off = math.hypot((landed[0] - target[0]) * COL, (landed[1] - target[1]) * ROW)
@@ -372,7 +377,7 @@ def main():
             e_dst = np.array([ex, ey])
             place_uv = [target[0] - ex / COL, target[1] - ey / ROW]
             if not straight:
-                yaw_cmd = clamp_yaw(yaw_cmd - got["yaw_deg"] / k_now())
+                yaw_cmd = clamp_yaw(yaw_cmd - YAW_STEP * got["yaw_deg"] / k_now())
             say(f"  pun din nou corectat cu {-ex:+.1f} mm pe coloane, {-ey:+.1f} mm spre robot, încheietura {yaw_cmd:+.1f} grd")
     finals = [m for i, m in enumerate(log) if i + 1 == len(log) or log[i + 1]["fix"] == 0]
     say(f"Gata: {sum(m['good'] for m in finals)}/{len(finals)} mutări bine puse ({len(log) - len(finals)} corecții). "
