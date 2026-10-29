@@ -57,6 +57,7 @@ REF = HERE / "ref/observe_small"  # imaginea foii goale din poza de start (mutar
 POSE_PX = 6.0  # colțurile mai departe de atât față de referință (~1,6 mm): poza de start nu s-a repetat (de obicei 1-3 px)
 GRIP_EMPTY = 2  # gheara citită la cel mult atât sub comandă = goală
 CLIPPED = "blob_clipped_by_image"  # fața de sus a cubului iese din cadrul camerei
+HELD_MAX_RATIO = 0.6  # pată sub atât din latura cubului, după pick: cubul din gheară, văzut la marginea de jos
 MAX_FIX_MM = 8.0  # corecția nu trece de atât: peste, e mai probabil o măsurătoare greșită
 K_WRIST = 0.23  # cât din rotirea comandată a cubului se vede pe foaie, la început (proba_rotire.py pe r1c1)
 K_RANGE = (0.15, 1.0)  # k învățat rămâne între acestea
@@ -288,7 +289,9 @@ def grab(cube, seen, uv, learned):
     post("beep", {"n": 2})
     start_pose()
     (obs, _), = analyses(1)
-    left = [f"r{c['row']}c{c['col']}" for c in obs["cells"] if c["occupancy"] == "occupied"]
+    # cubul din gheară se vede jos, peste r2, ca o fâșie mult mai mică decât un cub de pe foaie: nu se numără
+    left = [f"r{c['row']}c{c['col']}" for c in obs["cells"] if c["occupancy"] == "occupied"
+            and c["metrics"].get("size_ratio", 1.0) >= HELD_MAX_RATIO]
     if not holding:
         return "gol", diag, e
     return ("neclar" if left else "prins"), diag + (f"; pe foaie: {', '.join(left)} ocupat" if left else ""), e
