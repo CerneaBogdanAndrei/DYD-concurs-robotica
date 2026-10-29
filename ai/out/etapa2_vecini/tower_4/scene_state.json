@@ -1,0 +1,148 @@
+{
+  "schema_version": 2,
+  "scene_id": "memorie-tower_4",
+  "created_at": "2026-10-29T16:14:19Z",
+  "updated_at": "2026-10-29T16:14:19Z",
+  "locations": {
+    "medium": {
+      "rows": 3,
+      "cols": 3,
+      "observed_at": "2026-10-29T16:14:19Z",
+      "source": "perception",
+      "cells": [
+        {
+          "row": 0,
+          "col": 0,
+          "occupancy": "empty",
+          "occupancy_confidence": 0.98,
+          "stack": [],
+          "reasons": []
+        },
+        {
+          "row": 0,
+          "col": 1,
+          "occupancy": "empty",
+          "occupancy_confidence": 0.98,
+          "stack": [],
+          "reasons": []
+        },
+        {
+          "row": 0,
+          "col": 2,
+          "occupancy": "empty",
+          "occupancy_confidence": 0.98,
+          "stack": [],
+          "reasons": []
+        },
+        {
+          "row": 1,
+          "col": 0,
+          "occupancy": "empty",
+          "occupancy_confidence": 0.98,
+          "stack": [],
+          "reasons": []
+        },
+        {
+          "row": 1,
+          "col": 1,
+          "occupancy": "empty",
+          "occupancy_confidence": 0.98,
+          "stack": [],
+          "reasons": []
+        },
+        {
+          "row": 1,
+          "col": 2,
+          "occupancy": "empty",
+          "occupancy_confidence": 0.98,
+          "stack": [],
+          "reasons": []
+        },
+        {
+          "row": 2,
+          "col": 0,
+          "occupancy": "empty",
+          "occupancy_confidence": 0.98,
+          "stack": [],
+          "reasons": []
+        },
+        {
+          "row": 2,
+          "col": 1,
+          "occupancy": "empty",
+          "occupancy_confidence": 0.98,
+          "stack": [],
+          "reasons": []
+        },
+        {
+          "row": 2,
+          "col": 2,
+          "occupancy": "occupied",
+          "occupancy_confidence": 0.98,
+          "stack": [
+            {
+              "color": "blue",
+              "color_confidence": 0.95,
+              "yaw_deg": 0.99,
+              "yaw_confidence": 0.9,
+              "top_face": "full",
+              "cube_id": null,
+              "uv_top": [
+                2.6308,
+                2.6892
+              ]
+            },
+            {
+              "color": "blue",
+              "color_confidence": 0.95,
+              "yaw_deg": 0.22,
+              "yaw_confidence": 0.9,
+              "top_face": "icon",
+              "cube_id": null,
+              "uv_top": [
+                2.8155,
+                2.793
+              ]
+            },
+            {
+              "color": "green",
+              "color_confidence": 0.95,
+              "yaw_deg": 2.36,
+              "yaw_confidence": 0.9,
+              "top_face": "icon",
+              "cube_id": null,
+              "uv_top": [
+                3.0731,
+                3.0728
+              ]
+            },
+            {
+              "color": "blue",
+              "color_confidence": 0.95,
+              "yaw_deg": 3.38,
+              "yaw_confidence": 0.9,
+              "top_face": "full",
+              "cube_id": null,
+              "uv_top": [
+                3.4505,
+                3.3429
+              ]
+            }
+          ],
+          "reasons": []
+        }
+      ]
+    }
+  },
+  "zones": {
+    "buffer_1": {
+      "source": "given",
+      "stack": []
+    },
+    "buffer_2": {
+      "source": "given",
+      "stack": []
+    }
+  },
+  "metadata": {}
+}

@@ -14,7 +14,6 @@ from brain.configuration.models import (
     CAMERA_VERIFY_POLICIES,
     DETECTION_METHODS,
     MATCH_FACE_POLICIES,
-    PROXIMITY_MOUNTS,
     UNKNOWN_COLOR_POLICIES,
     ArmConfig,
     ArucoConfig,
@@ -29,7 +28,6 @@ from brain.configuration.models import (
     MemoryConfig,
     PlanningConfig,
     PreviewConfig,
-    ProximityConfig,
     QualityThresholds,
     SortMapConfig,
     SystemConfig,
@@ -94,7 +92,7 @@ def _check_schema(root: Section, expected: int) -> None:
 def load_system_config(path: PathLike) -> SystemConfig:
     root = read_yaml(path)
     root.reject_unknown(
-        ["schema_version", "cube", "locations", "vision", "memory", "arm", "proximity", "timing", "planning", "preview"]
+        ["schema_version", "cube", "locations", "vision", "memory", "arm", "timing", "planning", "preview"]
     )
     _check_schema(root, SYSTEM_SCHEMA_VERSION)
     cube_section = root.section("cube")
@@ -113,7 +111,6 @@ def load_system_config(path: PathLike) -> SystemConfig:
         vision=_parse_vision(root.section("vision")),
         memory=MemoryConfig(path=memory_section.string("path")),
         arm=_parse_arm(root.section("arm")),
-        proximity=_parse_proximity(root.section("proximity")),
         timing=_parse_timing(root.section("timing")),
         planning=planning,
         preview=_parse_preview(root.section("preview")),
@@ -230,55 +227,6 @@ def _parse_arm(s: Section) -> ArmConfig:
     )
 
 
-def _optional_number(s: Section, key: str, minimum: float) -> Optional[float]:
-    if s.raw(key, None) is None:
-        return None
-    return s.number(key, minimum=minimum)
-
-
-def _parse_proximity(s: Section) -> ProximityConfig:
-    s.reject_unknown(
-        [
-            "enabled",
-            "model",
-            "min_range_mm",
-            "max_range_mm",
-            "resolution_mm",
-            "max_rate_hz",
-            "beam_half_angle_deg",
-            "samples",
-            "mount",
-            "sensor_above_jaw_mm",
-            "hover_above_target_mm",
-            "tolerance_mm",
-            "required",
-            "stop_distance_mm",
-            "calibrated",
-        ]
-    )
-    low = s.number("min_range_mm", minimum=0.0)
-    high = s.number("max_range_mm", minimum=0.0)
-    if high <= low:
-        raise s.error("max_range_mm", high, "trebuie să fie > min_range_mm={}".format(low))
-    return ProximityConfig(
-        enabled=s.boolean("enabled"),
-        model=s.string("model"),
-        min_range_mm=low,
-        max_range_mm=high,
-        resolution_mm=s.number("resolution_mm", minimum=0.0, exclusive_minimum=True),
-        max_rate_hz=s.number("max_rate_hz", minimum=0.0, exclusive_minimum=True),
-        beam_half_angle_deg=s.number("beam_half_angle_deg", minimum=0.0, maximum=90.0),
-        samples=s.integer("samples", minimum=1, maximum=50),
-        mount=s.string("mount", choices=PROXIMITY_MOUNTS),
-        sensor_above_jaw_mm=_optional_number(s, "sensor_above_jaw_mm", 0.0),
-        hover_above_target_mm=s.number("hover_above_target_mm", minimum=0.0),
-        tolerance_mm=s.number("tolerance_mm", minimum=0.0, exclusive_minimum=True),
-        required=s.boolean("required"),
-        stop_distance_mm=_optional_number(s, "stop_distance_mm", 0.0),
-        calibrated=s.boolean("calibrated"),
-    )
-
-
 def _parse_timing(s: Section) -> TimingConfig:
     s.reject_unknown(["task_limit_s", "reserve_s", "observe_s", "pick_s", "place_s", "measured"])
     limit = s.number("task_limit_s", minimum=1.0)
@@ -326,7 +274,7 @@ def _parse_planning(s: Section, locations: Dict[str, LocationConfig]) -> Plannin
     if len(set(buffers)) != len(buffers):
         raise s.error("buffer_points", buffers, "nume duplicate")
     cost = s.section("cost")
-    cost.reject_unknown(["radial_deg_per_mm", "adjacent_stack_penalty_deg", "location_switch_deg"])
+    cost.reject_unknown(["radial_deg_per_mm", "adjacent_stack_penalty_deg", "location_switch_deg", "adjacent_cube_penalty_deg"])
     return PlanningConfig(
         max_tower_level=s.integer("max_tower_level", minimum=0, maximum=8),
         min_confidence=s.number("min_confidence", minimum=0.0, maximum=1.0),
@@ -342,6 +290,7 @@ def _parse_planning(s: Section, locations: Dict[str, LocationConfig]) -> Plannin
             radial_deg_per_mm=cost.number("radial_deg_per_mm", minimum=0.0),
             adjacent_stack_penalty_deg=cost.number("adjacent_stack_penalty_deg", minimum=0.0),
             location_switch_deg=cost.number("location_switch_deg", minimum=0.0),
+            adjacent_cube_penalty_deg=cost.number("adjacent_cube_penalty_deg", default=0.0, minimum=0.0),
         ),
     )
 

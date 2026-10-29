@@ -148,7 +148,7 @@ def run_task(config: AppConfig, goal: Optional[Goal], args: Any, confirm: Callab
         planner = Planner(config.system, config.sort_map,
                           CostModel.from_calib_file(config.system.planning.cost, config.system.arm.calib_json))
         budget = TimeBudget(clock, config.system.timing.task_limit_s, config.system.timing.reserve_s)
-        runner = TaskRunner(goal, config, planner, observer, clock, budget, session, None, store, initial_state=initial,
+        runner = TaskRunner(goal, config, planner, observer, clock, budget, session, store, initial_state=initial,
                             execute=bool(args.execute), task=task)
         result = runner.run()
         report = result.to_dict()

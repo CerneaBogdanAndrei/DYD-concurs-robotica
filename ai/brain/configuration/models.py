@@ -138,30 +138,6 @@ class ArmConfig:
     settle_s: float
 
 
-PROXIMITY_MOUNTS = ("coaxial", "none")
-
-
-@dataclass(frozen=True)
-class ProximityConfig:
-    """Senzorul de proximitate. Modelul și montajul sunt de confirmat; pragurile critice nu sunt validate."""
-
-    enabled: bool
-    model: str
-    min_range_mm: float
-    max_range_mm: float
-    resolution_mm: float
-    max_rate_hz: float
-    beam_half_angle_deg: float
-    samples: int
-    mount: str
-    sensor_above_jaw_mm: Optional[float]
-    hover_above_target_mm: float
-    tolerance_mm: float
-    required: bool
-    stop_distance_mm: Optional[float]
-    calibrated: bool
-
-
 @dataclass(frozen=True)
 class TimingConfig:
     """Estimări inițiale (NEMĂSURATE) — se înlocuiesc cu duratele măsurate la rulări."""
@@ -195,6 +171,7 @@ class CostConfig:
     radial_deg_per_mm: float
     adjacent_stack_penalty_deg: float
     location_switch_deg: float
+    adjacent_cube_penalty_deg: float = 0.0  # per vecin ocupat (sus/jos/stânga/dreapta) la sursă și la țintă
 
 
 @dataclass(frozen=True)
@@ -219,7 +196,6 @@ class SystemConfig:
     vision: VisionConfig
     memory: MemoryConfig
     arm: ArmConfig
-    proximity: ProximityConfig
     timing: TimingConfig
     planning: PlanningConfig
     preview: PreviewConfig

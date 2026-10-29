@@ -172,14 +172,6 @@ def test_budget_exceeded_stops_new_moves(app_config):
     assert report["simulated_time_s"] <= 60.0 and 0 < report["moves_attempted"] < 5
 
 
-def test_proximity_contradiction_triggers_retry(app_config):
-    report = run_scenario(app_config, sc.example_s2(app_config.system, app_config.sort_map),
-                          SimOptions(proximity=True, faults=parse_faults("pick:grasp_fail@2,place:drop@4")))
-    details = {m["outcome"]: m["detail"] for m in report["moves"]}
-    assert "senzorul" in details["pick_missed"] and "senzorul" in details["dropped"]
-    assert report["success"]
-
-
 def test_dry_run_only_plans(app_config):
     report = run_scenario(app_config, sc.example_s2(app_config.system, app_config.sort_map), SimOptions(dry_run=True))
     assert report["final_state"] == "DONE" and not report["moves"] and len(report["first_plan"]) == 5

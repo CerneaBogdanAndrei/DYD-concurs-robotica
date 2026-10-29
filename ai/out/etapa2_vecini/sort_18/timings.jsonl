@@ -1,0 +1,50 @@
+{"method": "go_pose", "duration_s": 1.2, "result": "ok", "simulated": true, "detail": "'observe_medium', 'fast'"}
+{"method": "observe", "duration_s": 1.8, "result": "actionable", "simulated": true, "detail": "medium"}
+{"method": "pick", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'medium', (0, 0), yaw_deg=9.77733679315996, level=0, uv=(0.4034, 0.4523)"}
+{"method": "place", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'zone_yellow', None, level=0, yaw_deg=0.0"}
+{"method": "go_pose", "duration_s": 1.2, "result": "ok", "simulated": true, "detail": "'observe_medium', 'fast'"}
+{"method": "observe", "duration_s": 1.8, "result": "actionable", "simulated": true, "detail": "medium"}
+{"method": "pick", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'medium', (0, 1), yaw_deg=1.1862866122349374, level=0, uv=(1.4682, 0.513)"}
+{"method": "place", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'zone_red', None, level=0, yaw_deg=0.0"}
+{"method": "go_pose", "duration_s": 1.2, "result": "ok", "simulated": true, "detail": "'observe_medium', 'fast'"}
+{"method": "observe", "duration_s": 1.8, "result": "actionable", "simulated": true, "detail": "medium"}
+{"method": "pick", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'medium', (0, 2), yaw_deg=-11.591263689904238, level=1, uv=(2.4506, 0.6115)"}
+{"method": "place", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'zone_blue', None, level=0, yaw_deg=0.0"}
+{"method": "go_pose", "duration_s": 1.2, "result": "ok", "simulated": true, "detail": "'observe_medium', 'fast'"}
+{"method": "observe", "duration_s": 1.8, "result": "actionable", "simulated": true, "detail": "medium"}
+{"method": "pick", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'medium', (0, 2), yaw_deg=3.017268560845295, level=0, uv=(2.4735, 0.5955)"}
+{"method": "place", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'zone_yellow', None, level=1, yaw_deg=0.0"}
+{"method": "go_pose", "duration_s": 1.2, "result": "ok", "simulated": true, "detail": "'observe_medium', 'fast'"}
+{"method": "observe", "duration_s": 1.8, "result": "actionable", "simulated": true, "detail": "medium"}
+{"method": "pick", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'medium', (1, 0), yaw_deg=4.727895011905545, level=0, uv=(0.5388, 1.519)"}
+{"method": "place", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'zone_blue', None, level=1, yaw_deg=0.0"}
+{"method": "go_pose", "duration_s": 1.2, "result": "ok", "simulated": true, "detail": "'observe_medium', 'fast'"}
+{"method": "observe", "duration_s": 1.8, "result": "actionable", "simulated": true, "detail": "medium"}
+{"method": "pick", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'medium', (2, 0), yaw_deg=10.585726864985645, level=0, uv=(0.4605, 2.4337)"}
+{"method": "place", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'zone_yellow', None, level=2, yaw_deg=0.0"}
+{"method": "go_pose", "duration_s": 1.2, "result": "ok", "simulated": true, "detail": "'observe_medium', 'fast'"}
+{"method": "observe", "duration_s": 1.8, "result": "actionable", "simulated": true, "detail": "medium"}
+{"method": "pick", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'medium', (1, 1), yaw_deg=10.105051853145, level=1, uv=(1.3874, 1.5809)"}
+{"method": "place", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'zone_green', None, level=0, yaw_deg=0.0"}
+{"method": "go_pose", "duration_s": 1.2, "result": "ok", "simulated": true, "detail": "'observe_medium', 'fast'"}
+{"method": "observe", "duration_s": 1.8, "result": "actionable", "simulated": true, "detail": "medium"}
+{"method": "pick", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'medium', (2, 1), yaw_deg=-3.8324936832573684, level=1, uv=(1.4397, 2.5264)"}
+{"method": "place", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'zone_red', None, level=1, yaw_deg=0.0"}
+{"method": "go_pose", "duration_s": 1.2, "result": "ok", "simulated": true, "detail": "'observe_medium', 'fast'"}
+{"method": "observe", "duration_s": 1.8, "result": "actionable", "simulated": true, "detail": "medium"}
+{"method": "pick", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'medium', (1, 1), yaw_deg=3.0045033717365186, level=0, uv=(1.3786, 1.5609)"}
+{"method": "place", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'zone_blue', None, level=2, yaw_deg=0.0"}
+{"method": "go_pose", "duration_s": 1.2, "result": "ok", "simulated": true, "detail": "'observe_medium', 'fast'"}
+{"method": "observe", "duration_s": 1.8, "result": "actionable", "simulated": true, "detail": "medium"}
+{"method": "pick", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'medium', (1, 2), yaw_deg=5.422800402910738, level=0, uv=(2.5599, 1.5303)"}
+{"method": "place", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'zone_green', None, level=1, yaw_deg=0.0"}
+{"method": "go_pose", "duration_s": 1.2, "result": "ok", "simulated": true, "detail": "'observe_medium', 'fast'"}
+{"method": "observe", "duration_s": 1.8, "result": "actionable", "simulated": true, "detail": "medium"}
+{"method": "pick", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'medium', (2, 1), yaw_deg=-6.858188044094092, level=0, uv=(1.4731, 2.5519)"}
+{"method": "place", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'zone_red', None, level=2, yaw_deg=0.0"}
+{"method": "go_pose", "duration_s": 1.2, "result": "ok", "simulated": true, "detail": "'observe_medium', 'fast'"}
+{"method": "observe", "duration_s": 1.8, "result": "actionable", "simulated": true, "detail": "medium"}
+{"method": "pick", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'medium', (2, 2), yaw_deg=4.448205702193043, level=0, uv=(2.4119, 2.4367)"}
+{"method": "place", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'zone_blue', None, level=3, yaw_deg=0.0"}
+{"method": "go_pose", "duration_s": 1.2, "result": "ok", "simulated": true, "detail": "'observe_medium', 'fast'"}
+{"method": "observe", "duration_s": 1.8, "result": "actionable", "simulated": true, "detail": "medium"}

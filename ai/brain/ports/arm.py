@@ -20,7 +20,7 @@ Semantică comună tuturor metodelor:
 inaccesibilă (motivul în `last_reason`). Cu `False` brațul NU a coborât, dar poate să se fi deplasat pe traseu
 (constatarea 1 din `docs/questions-for-kinematics-team.md`): `position_uncertain` devine True până la
 următorul `home`/`go_pose`. `True` NU dovedește că
-cubul a fost prins sau așezat: confirmarea vine din viziune și, opțional, din senzorul de proximitate.
+cubul a fost prins sau așezat: confirmarea vine din reobservarea cu camera.
 """
 
 from __future__ import annotations

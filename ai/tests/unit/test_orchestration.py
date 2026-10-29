@@ -1,6 +1,4 @@
-"""Îmbinarea observației cu memoria, sesiunea cu brațul, bugetul, verificarea prin proximitate și tabelul FSM."""
-
-import dataclasses
+"""Îmbinarea observației cu memoria, sesiunea cu brațul, bugetul și tabelul FSM."""
 
 import pytest
 
@@ -9,13 +7,11 @@ from brain.domain.cube import Color, Occupancy
 from brain.domain.errors import SafetyRejected
 from brain.domain.grid import GridCoord
 from brain.domain.plan import CubeRef, Move, PickAction, PlaceAction, SlotRef
-from brain.domain.proximity import ProximityReading, SensorStatus, Validity
 from brain.domain.scene_state import CellState, CubeState, LocationState, SceneState
 from brain.orchestration import fsm
 from brain.orchestration.memory_merge import (
     HEIGHT_FROM_SIZE, HEIGHT_UNCERTAIN, apply_height_hint, apply_move, estimated_height, get_stack, merge_cell,
 )
-from brain.orchestration.proximity_check import CUBE_BELOW, HELD, NOT_HELD, NOTHING_BELOW, UNKNOWN, ProximityVerifier
 from brain.orchestration.session import ArmSession, DurationJournal, StopRequested, TimeBudget
 
 RED, BLUE, GREEN = (CubeState(c, 0.9) for c in (Color.RED, Color.BLUE, Color.GREEN))
@@ -110,31 +106,6 @@ def test_arm_session_mode_journal_and_stop(tmp_path):
         session.go_pose("home")
     with pytest.raises(SafetyRejected):
         ArmSession(_Arm(clock), clock, journal, "hardware").connect()  # simularea nu trece drept braț real
-
-
-class _Sensor:
-    def __init__(self, readings):
-        self.readings = list(readings)
-
-    def read(self):
-        value = self.readings.pop(0) if len(self.readings) > 1 else self.readings[0]
-        if isinstance(value, Validity):
-            return ProximityReading(None, value, SensorStatus.OK, 0.0, 1)
-        return ProximityReading(float(value), Validity.VALID, SensorStatus.OK, 0.0, 1)
-
-
-@pytest.mark.parametrize("readings, s, expected", [
-    ([Validity.BELOW_RANGE] * 5, 25.0, HELD),
-    ([55, 56, 54, 55, 57], 25.0, CUBE_BELOW),
-    ([85, 86, 84, 85, 85], 25.0, NOTHING_BELOW),
-    ([140] * 5, 25.0, NOT_HELD),
-    ([55] * 5, None, NOT_HELD),  # s necalibrat: doar ținut / neținut
-    ([Validity.TIMEOUT] * 3 + [55] * 2, 25.0, UNKNOWN),
-])
-def test_proximity_verifier(app_config, readings, s, expected):
-    config = dataclasses.replace(app_config.system.proximity, samples=5)
-    verifier = ProximityVerifier(_Sensor(readings), config, 30.0, s)
-    assert verifier.after_place() == expected
 
 
 def test_fsm_transition_table_is_closed():

@@ -4,7 +4,9 @@ Cu `calib.json`-ul serviciului (`arm.calib_json`): poziția fiecărui slot în s
 modelul de caroiaj al serviciului (`src/grid.ts`: centrul celulei = O + c·ecol + r·erow, potrivit prin cele
 mai mici pătrate din punctele învățate) sau din punctul zonei. Costul dintre două poziții e
 max(|Δ unghi bază|, `radial_deg_per_mm`·|Δ rază|), plus `adjacent_stack_penalty_deg` dacă ținta are lângă
-ea o stivă de cel puțin 2 cuburi (gheara poate atinge stiva).
+ea o stivă de cel puțin 2 cuburi (gheara poate atinge stiva), plus `adjacent_cube_penalty_deg` pentru fiecare
+celulă vecină ocupată (sus/jos/stânga/dreapta) la sursă și la țintă: gheara deschisă e mai lată decât cubul,
+deci planul preferă mutările la care degetele au loc să coboare.
 
 Fără `calib.json` (sau cu un slot necalibrat): metrică substitut = distanța Manhattan în celule +
 `location_switch_deg` la schimbarea locației, marcată `cost_is_substitute`.
@@ -148,6 +150,14 @@ class CostModel:
         tall = any(world.height(n) >= STACK_PENALTY_HEIGHT for n in world.neighbors(slot))
         return self.cost.adjacent_stack_penalty_deg if tall else 0.0
 
+    def clearance_penalty(self, world: PlanningWorld, slot: SlotRef) -> float:
+        if slot.cell is None or not self.cost.adjacent_cube_penalty_deg:
+            return 0.0
+        crowded = sum(1 for n in world.neighbors(slot)
+                      if n.cell is not None and (n.cell.row == slot.cell.row or n.cell.col == slot.cell.col)
+                      and world.height(n) > 0)
+        return crowded * self.cost.adjacent_cube_penalty_deg
+
     def move_cost(
         self, world: PlanningWorld, previous: Optional[SlotRef], source: SlotRef, target: SlotRef
     ) -> Tuple[float, bool]:
@@ -155,6 +165,7 @@ class CostModel:
         to_source, sub_a = self.travel(previous, source)
         carry, sub_b = self.travel(source, target)
         penalty = self.stack_penalty(world, source) + self.stack_penalty(world, target)
+        penalty += self.clearance_penalty(world, source) + self.clearance_penalty(world, target)
         return round(to_source + carry + penalty, 3), sub_a or sub_b
 
 

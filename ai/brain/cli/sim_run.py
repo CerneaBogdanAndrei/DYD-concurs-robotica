@@ -22,7 +22,6 @@ from brain.domain.errors import BrainError
 from brain.memory.store import SceneStore
 from brain.orchestration.fsm import TaskRunner
 from brain.orchestration.observer import CameraPerception, LocationObserver
-from brain.orchestration.proximity_check import ProximityVerifier
 from brain.orchestration.session import ArmSession, DurationJournal, TimeBudget
 from brain.planning.cost import CostModel
 from brain.planning.planner import Planner
@@ -31,7 +30,6 @@ from brain.simulation.scenario import OraclePerception, Scenario, check_goal, de
 from brain.simulation.sim_world import SimPhysics
 
 PERCEPTIONS = ("oracle", "render")
-SIM_SENSOR_ABOVE_JAW_MM = 25.0  # cunoscut doar în simulare; pe robot e NECALIBRAT
 _FAULT_RE = re.compile(r"^\s*(\w+):(\w+)(?:@(\d+)|%([0-9.]+))\s*$")
 
 
@@ -39,7 +37,6 @@ _FAULT_RE = re.compile(r"^\s*(\w+):(\w+)(?:@(\d+)|%([0-9.]+))\s*$")
 class SimOptions:
     perception: str = "oracle"
     faults: Tuple[FaultSpec, ...] = ()
-    proximity: bool = False
     dry_run: bool = False
     gif: Optional[Path] = None
     out_dir: Optional[Path] = None
@@ -102,13 +99,6 @@ def run_scenario(config: AppConfig, scenario: Scenario, options: Optional[SimOpt
         camera = SyntheticCamera(make_renderer(world, system, scenario.seed), poses, lambda: mock.current_pose)
         perception = CameraPerception(camera, VisionPipeline(system, config.colors), system.vision.frames_to_aggregate)
     observer = LocationObserver(system, perception, clock, journal, session, task=task_name)
-    proximity = None
-    if options.proximity:
-        from brain.adapters.proximity.simulated import SimulatedProximity
-
-        sensor = SimulatedProximity(world, system.proximity, clock, sensor_above_jaw_mm=SIM_SENSOR_ABOVE_JAW_MM,
-                                    seed=scenario.seed)
-        proximity = ProximityVerifier(sensor, system.proximity, system.cube.size_mm, SIM_SENSOR_ABOVE_JAW_MM)
     planner = Planner(system, config.sort_map, CostModel.from_calib_file(system.planning.cost, system.arm.calib_json))
     budget = TimeBudget(clock, system.timing.task_limit_s, system.timing.reserve_s)
     store = SceneStore(out / "scene_state.json") if out is not None else None
@@ -117,7 +107,7 @@ def run_scenario(config: AppConfig, scenario: Scenario, options: Optional[SimOpt
         from brain.simulation.schematic import Recorder
 
         recorder = Recorder(world, "{} ({})".format(scenario.name, scenario.goal.describe()))
-    runner = TaskRunner(scenario.goal, config, planner, observer, clock, budget, session, proximity, store,
+    runner = TaskRunner(scenario.goal, config, planner, observer, clock, budget, session, store,
                         initial_state=scenario.initial_memory(system), execute=not options.dry_run, task=task_name,
                         on_step=recorder)
     result = runner.run()
@@ -125,7 +115,7 @@ def run_scenario(config: AppConfig, scenario: Scenario, options: Optional[SimOpt
     report = result.to_dict()
     report.update({
         "scenario": scenario.name, "seed": scenario.seed, "tags": list(scenario.tags), "note": scenario.note,
-        "perception": options.perception, "proximity": options.proximity, "dry_run": options.dry_run,
+        "perception": options.perception, "dry_run": options.dry_run,
         "arm": "tee(service+mock)" if options.service_url else "mock",
         "faults": ["{}:{}{}".format(f.method, f.kind, "@{}".format(f.call) if f.call else "%{}".format(f.probability))
                    for f in options.faults],

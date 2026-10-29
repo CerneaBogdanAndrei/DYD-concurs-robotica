@@ -1,0 +1,174 @@
+{
+  "schema_version": 2,
+  "scene_id": "memorie-tower_17",
+  "created_at": "2026-10-29T16:14:20Z",
+  "updated_at": "2026-10-29T16:14:20Z",
+  "locations": {
+    "medium": {
+      "rows": 3,
+      "cols": 3,
+      "observed_at": "2026-10-29T16:14:20Z",
+      "source": "perception",
+      "cells": [
+        {
+          "row": 0,
+          "col": 0,
+          "occupancy": "occupied",
+          "occupancy_confidence": 0.98,
+          "stack": [
+            {
+              "color": "red",
+              "color_confidence": 0.95,
+              "yaw_deg": -7.12,
+              "yaw_confidence": 0.9,
+              "top_face": "full",
+              "cube_id": null,
+              "uv_top": [
+                0.4857,
+                0.4552
+              ]
+            }
+          ],
+          "reasons": []
+        },
+        {
+          "row": 0,
+          "col": 1,
+          "occupancy": "empty",
+          "occupancy_confidence": 0.98,
+          "stack": [],
+          "reasons": []
+        },
+        {
+          "row": 0,
+          "col": 2,
+          "occupancy": "occupied",
+          "occupancy_confidence": 0.98,
+          "stack": [
+            {
+              "color": "yellow",
+              "color_confidence": 0.95,
+              "yaw_deg": -1.89,
+              "yaw_confidence": 0.9,
+              "top_face": "icon",
+              "cube_id": null,
+              "uv_top": [
+                2.6471,
+                0.3465
+              ]
+            }
+          ],
+          "reasons": []
+        },
+        {
+          "row": 1,
+          "col": 0,
+          "occupancy": "empty",
+          "occupancy_confidence": 0.98,
+          "stack": [],
+          "reasons": []
+        },
+        {
+          "row": 1,
+          "col": 1,
+          "occupancy": "empty",
+          "occupancy_confidence": 0.98,
+          "stack": [],
+          "reasons": []
+        },
+        {
+          "row": 1,
+          "col": 2,
+          "occupancy": "occupied",
+          "occupancy_confidence": 0.98,
+          "stack": [
+            {
+              "color": "blue",
+              "color_confidence": 0.95,
+              "yaw_deg": -1.31,
+              "yaw_confidence": 0.9,
+              "top_face": "icon",
+              "cube_id": null,
+              "uv_top": [
+                2.637,
+                1.4743
+              ]
+            },
+            {
+              "color": "red",
+              "color_confidence": 0.95,
+              "yaw_deg": 1.39,
+              "yaw_confidence": 0.9,
+              "top_face": "full",
+              "cube_id": null,
+              "uv_top": [
+                2.8138,
+                1.4164
+              ]
+            },
+            {
+              "color": "red",
+              "color_confidence": 0.95,
+              "yaw_deg": -0.71,
+              "yaw_confidence": 0.9,
+              "top_face": "full",
+              "cube_id": null,
+              "uv_top": [
+                3.1436,
+                1.5257
+              ]
+            },
+            {
+              "color": "yellow",
+              "color_confidence": 0.95,
+              "yaw_deg": 0.16,
+              "yaw_confidence": 0.9,
+              "top_face": "full",
+              "cube_id": null,
+              "uv_top": [
+                3.4243,
+                1.5371
+              ]
+            }
+          ],
+          "reasons": []
+        },
+        {
+          "row": 2,
+          "col": 0,
+          "occupancy": "empty",
+          "occupancy_confidence": 0.98,
+          "stack": [],
+          "reasons": []
+        },
+        {
+          "row": 2,
+          "col": 1,
+          "occupancy": "empty",
+          "occupancy_confidence": 0.98,
+          "stack": [],
+          "reasons": []
+        },
+        {
+          "row": 2,
+          "col": 2,
+          "occupancy": "empty",
+          "occupancy_confidence": 0.98,
+          "stack": [],
+          "reasons": []
+        }
+      ]
+    }
+  },
+  "zones": {
+    "buffer_1": {
+      "source": "given",
+      "stack": []
+    },
+    "buffer_2": {
+      "source": "given",
+      "stack": []
+    }
+  },
+  "metadata": {}
+}

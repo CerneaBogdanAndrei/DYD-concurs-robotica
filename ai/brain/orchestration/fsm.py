@@ -4,7 +4,7 @@ Buclă închisă: la fiecare pas se replanifică din memoria verificată și se 
 Tranzițiile permise sunt în `TRANSITIONS`; orice altă tranziție e o eroare de program.
 
 Recuperare:
-- pick ratat (vizibil la reobservare sau prin senzor) → reîncercare până la `max_pick_attempts` pe același
+- pick ratat (vizibil la reobservare) → reîncercare până la `max_pick_attempts` pe același
   loc, apoi locul e ocolit;
 - pick/place = False sau `MotionAborted` → locul e ocolit; brațul trece prin `go_pose(observe_*)` înainte de
   următoarea comandă (poziția poate fi alta, constatarea 1 a serviciului); dacă place eșuează cu cubul în
@@ -39,7 +39,6 @@ from brain.orchestration.memory_merge import (
     set_stack,
 )
 from brain.orchestration.observer import LocationObserver, ObservationFailed
-from brain.orchestration.proximity_check import CUBE_BELOW, HELD, NOTHING_BELOW, UNKNOWN, ProximityVerifier
 from brain.orchestration.session import ArmSession, StopRequested, TimeBudget
 from brain.planning.goals import Goal
 from brain.planning.planner import Planner
@@ -137,7 +136,6 @@ class TaskRunner:
         clock: Any,
         budget: TimeBudget,
         session: Optional[ArmSession] = None,
-        proximity: Optional[ProximityVerifier] = None,
         store: Optional[SceneStore] = None,
         initial_state: Optional[SceneState] = None,
         execute: bool = True,
@@ -153,7 +151,6 @@ class TaskRunner:
         self.clock = clock
         self.budget = budget
         self.session = session
-        self.proximity = proximity
         self.store = store
         self.execute = execute
         self.task = task
@@ -337,14 +334,6 @@ class TaskRunner:
             self._warn("{} ocolit: {}".format(pick.slot, record.detail))
             self._event("unreachable")
             return
-        if self.proximity is not None:
-            verdict = self.proximity.after_pick()
-            if verdict not in (HELD, UNKNOWN):
-                record.detail = "senzorul: cubul nu e în gheară ({})".format(verdict)
-                self._count_miss(pick.slot)
-                self._finish_record(record, "pick_missed")
-                self._event("pick_failed")
-                return
         try:
             ok = self.session.place(place.slot.location, _cell(place.slot), place.level, place.yaw_deg)
         except MotionAborted as exc:
@@ -361,19 +350,7 @@ class TaskRunner:
             self._event("unreachable")
             return
         self.memory = apply_move(self.memory, move)
-        outcome = "ok"
-        if self.proximity is not None:
-            verdict = self.proximity.after_place()
-            if verdict == NOTHING_BELOW:
-                outcome = "dropped"
-                record.detail = "senzorul: nimic sub gheară după eliberare (cubul a căzut)"
-                self.memory = set_stack(self.memory, place.slot, get_stack(self._before, place.slot))
-            elif verdict == HELD:
-                outcome = "not_released"
-                record.detail = "senzorul: cubul pare încă în gheară"
-            elif verdict == CUBE_BELOW:
-                record.detail = "senzorul confirmă cubul pe țintă"
-        self._finish_record(record, outcome)
+        self._finish_record(record, "ok")
         self._event("executed")
 
     def _finish_record(self, record: MoveRecord, outcome: str) -> None:
@@ -399,7 +376,7 @@ class TaskRunner:
         outcome = self._outcome
         each_move = self.system.planning.camera_verify == "each_move"
         touched = sorted({s.location for s in (move.pick.slot, move.place.slot) if not s.is_zone})
-        if move.place.slot.is_zone or outcome in ("dropped", "not_released"):
+        if move.place.slot.is_zone:
             touched = list(self.system.planning.active_locations)  # zonele nu se văd: un cub căzut poate ateriza oriunde
         if each_move or outcome not in ("ok",):
             expected_grids = {name: loc for name, loc in self.memory.locations.items()}

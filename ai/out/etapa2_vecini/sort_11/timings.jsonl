@@ -1,0 +1,18 @@
+{"method": "go_pose", "duration_s": 1.2, "result": "ok", "simulated": true, "detail": "'observe_medium', 'fast'"}
+{"method": "observe", "duration_s": 1.8, "result": "actionable", "simulated": true, "detail": "medium"}
+{"method": "pick", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'medium', (1, 1), yaw_deg=1.1778064528806311, level=1, uv=(1.4783, 1.5038)"}
+{"method": "place", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'zone_yellow', None, level=0, yaw_deg=0.0"}
+{"method": "go_pose", "duration_s": 1.2, "result": "ok", "simulated": true, "detail": "'observe_medium', 'fast'"}
+{"method": "observe", "duration_s": 1.8, "result": "actionable", "simulated": true, "detail": "medium"}
+{"method": "pick", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'medium', (0, 0), yaw_deg=-8.885425214416848, level=0, uv=(0.4099, 0.6095)"}
+{"method": "place", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'zone_green', None, level=1, yaw_deg=0.0"}
+{"method": "go_pose", "duration_s": 1.2, "result": "ok", "simulated": true, "detail": "'observe_medium', 'fast'"}
+{"method": "observe", "duration_s": 1.8, "result": "actionable", "simulated": true, "detail": "medium"}
+{"method": "pick", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'medium', (1, 1), yaw_deg=-5.392588421732896, level=0, uv=(1.4665, 1.5029)"}
+{"method": "place", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'zone_blue', None, level=0, yaw_deg=0.0"}
+{"method": "go_pose", "duration_s": 1.2, "result": "ok", "simulated": true, "detail": "'observe_medium', 'fast'"}
+{"method": "observe", "duration_s": 1.8, "result": "actionable", "simulated": true, "detail": "medium"}
+{"method": "pick", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'medium', (2, 0), yaw_deg=-3.521403478549246, level=0, uv=(0.4244, 2.5138)"}
+{"method": "place", "duration_s": 4.5, "result": "ok", "simulated": true, "detail": "'zone_blue', None, level=1, yaw_deg=0.0"}
+{"method": "go_pose", "duration_s": 1.2, "result": "ok", "simulated": true, "detail": "'observe_medium', 'fast'"}
+{"method": "observe", "duration_s": 1.8, "result": "actionable", "simulated": true, "detail": "medium"}

@@ -73,6 +73,18 @@ lumea simulată a brain-ului), cu `ai/tests/fixtures/calib_brain.json` (poziții
 - Rămân deschise: timpi măsurați pe braț (9), starea după o eroare de comunicație (10; brain-ul presupune
   „necunoscută” și nu trimite `home`), transformarea cameră ↔ flanșă (11).
 
+## Constatări pe braț: gheara între cuburi vecine (2026-10-29)
+
+12. **Gheara coboară deschisă la `GRIP_OPEN` = 60, mult peste latura cubului (30 mm), și lovește cuburile vecine.**
+    `robot.pick` deschide gheara la `GRIP_OPEN` înainte de apropiere, indiferent de comanda creierului, iar
+    `open_gripper(full=False)` nu există. Pe foaia mică, cu cuburi alăturate, coliziunea e aproape sigură.
+    Cerere: (a) `GRIP_OPEN` măsurat pentru o deschidere de ~33–34 mm (cubul + 1,5–2 mm pe fiecare parte);
+    (b) ideal, un parametru opțional `grip_open` la `pick`/`place`, ca brațul să se apropie larg doar când are loc.
+    Măsurare: brațul în `home`, `move_joints` cu 6 unghiuri (gheara în pași de 5) și rigla între degete.
+13. **Axa degetelor nu poate fi aleasă.** `wristForYaw` aduce mereu încheietura la ±45° de centru, deci un cub cu
+    vecini la stânga și la dreapta nu poate fi prins cu degetele pe direcția liberă (rotit cu 90°). Cerere: un
+    parametru (de ex. `finger_axis: "cols" | "rows"`) sau acceptarea unui yaw pe 0..180° fără reducere modulo 90°.
+
 ## Contractul inițial (înainte de `CONTRACT_BRAT.md`)
 
 Brain-ul (percepție, memorie, planificare, coordonare) comandă brațul **exclusiv** prin contractul `ArmInterface` de mai jos. Nu importă `Arm_Lib` și nu accesează I2C. Ca să vă putem integra modulul fără modificări în logica noastră, avem nevoie de răspunsurile de mai jos.

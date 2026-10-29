@@ -100,7 +100,6 @@ def _build_parser() -> argparse.ArgumentParser:
     simrun.add_argument("--faults", default=None, help="erori injectate: pick:grasp_fail@1,place:drop%%0.1,...")
     simrun.add_argument("--perception", choices=("oracle", "render"), default="render",
                         help="render = cameră sintetică + viziunea reală; oracle = adevărul simulat (rapid)")
-    simrun.add_argument("--proximity", action="store_true", help="senzorul de proximitate simulat (HC-SR04)")
     simrun.add_argument("--buffers", type=int, default=None, metavar="N",
                         help="doar în simulare: N puncte tampon buffer_1..N (pe robot trebuie calibrate)")
     simrun.add_argument("--gif", default=None, help="animația schematică (GIF cu Pillow, altfel PNG-uri)")
@@ -290,7 +289,7 @@ def _cmd_camera_preview(config: AppConfig, args: argparse.Namespace) -> int:
     if args.frames:
         source = LoopingFileCamera([str(path) for path in _expand(args.frames)])
     else:
-        source = UsbCamera(args.index, args.width, args.height, flush=0)
+        source = UsbCamera(args.index, args.width, args.height, flush=0, fps=int(round(settings.max_fps)))
     hub = PreviewHub(location)
     host = args.host or settings.host
     try:
@@ -307,7 +306,7 @@ def _cmd_camera_preview(config: AppConfig, args: argparse.Namespace) -> int:
     ).start()
     hosts = local_addresses() if host == "0.0.0.0" else [host]
     print("Previzualizare {} ({}): {}".format(
-        location, "fișiere" if args.frames else "camera {}".format(args.index),
+        location, "fișiere" if args.frames else "camera {}: {}".format(args.index, source.describe()),
         "  ".join("http://{}:{}/".format(h, server.port) for h in hosts)))
     print("  imagini: http://<ip>:{0}/snapshot.jpg  http://<ip>:{0}/annotated.jpg ; pe disc: {1}".format(
         server.port, settings.save_dir))
@@ -409,7 +408,7 @@ def _cmd_sim_run(config: AppConfig, args: argparse.Namespace) -> int:
         config = dataclasses.replace(config, system=dataclasses.replace(config.system, planning=planning))
     system, sort_map = config.system, config.sort_map
     out = Path(args.out)
-    options = SimOptions(perception=args.perception, faults=parse_faults(args.faults), proximity=args.proximity,
+    options = SimOptions(perception=args.perception, faults=parse_faults(args.faults),
                          dry_run=args.dry_run, service_url=args.service_url)
     if args.random:
         tasks = ("tower", "reproduce", "sort") if args.task == "all" else (args.task,)

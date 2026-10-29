@@ -1,0 +1,315 @@
+{
+  "task": "sort",
+  "goal": "sortare pe zonele hărții",
+  "final_state": "DONE",
+  "goal_reached": true,
+  "budget_exhausted": false,
+  "unmet": [],
+  "warnings": [
+    "2 cub(uri) de culoare necunoscută rămân pe loc (unknown_color_policy=leave)",
+    "1 cub(uri) de culoare necunoscută rămân pe loc (unknown_color_policy=leave)"
+  ],
+  "error": null,
+  "elapsed_s": 109.8,
+  "moves_attempted": 10,
+  "move_outcomes": {
+    "ok": 10
+  },
+  "observations": 11,
+  "arm_commands": 31,
+  "first_plan": [
+    " 1. blue medium[0,0] (niv. 0) -> zone_blue (niv. 0): albastru pe zone_blue [cost substitut]",
+    " 2. green medium[1,2] (niv. 1) -> zone_green (niv. 0): verde pe zone_green [cost substitut]",
+    " 3. red medium[0,1] (niv. 0) -> zone_red (niv. 0): roșu pe zone_red [cost substitut]",
+    " 4. yellow medium[0,2] (niv. 0) -> zone_yellow (niv. 0): galben pe zone_yellow [cost substitut]",
+    " 5. yellow medium[2,0] (niv. 1) -> zone_yellow (niv. 1): galben pe zone_yellow [cost substitut]",
+    " 6. red medium[1,0] (niv. 0) -> zone_red (niv. 1): roșu pe zone_red [cost substitut]",
+    " 7. red medium[2,1] (niv. 0) -> zone_red (niv. 2): roșu pe zone_red [cost substitut]",
+    " 8. blue medium[2,2] (niv. 0) -> zone_blue (niv. 1): albastru pe zone_blue [cost substitut]",
+    "ATENȚIE: 2 cub(uri) de culoare necunoscută rămân pe loc (unknown_color_policy=leave)"
+  ],
+  "first_plan_estimated_s": 100.0,
+  "last_plan": [],
+  "moves": [
+    {
+      "index": 1,
+      "move": "blue medium[0,0] (niv. 0) -> zone_blue (niv. 0)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 1.8,
+      "duration_s": 9.0
+    },
+    {
+      "index": 2,
+      "move": "green medium[1,2] (niv. 1) -> zone_green (niv. 0)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 12.6,
+      "duration_s": 9.0
+    },
+    {
+      "index": 3,
+      "move": "red medium[0,1] (niv. 0) -> zone_red (niv. 0)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 23.4,
+      "duration_s": 9.0
+    },
+    {
+      "index": 4,
+      "move": "yellow medium[0,2] (niv. 0) -> zone_yellow (niv. 0)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 34.2,
+      "duration_s": 9.0
+    },
+    {
+      "index": 5,
+      "move": "blue medium[1,2] (niv. 0) -> zone_blue (niv. 1)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 45.0,
+      "duration_s": 9.0
+    },
+    {
+      "index": 6,
+      "move": "blue medium[2,2] (niv. 0) -> zone_blue (niv. 2)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 55.8,
+      "duration_s": 9.0
+    },
+    {
+      "index": 7,
+      "move": "yellow medium[2,0] (niv. 1) -> zone_yellow (niv. 1)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 66.6,
+      "duration_s": 9.0
+    },
+    {
+      "index": 8,
+      "move": "red medium[1,0] (niv. 0) -> zone_red (niv. 1)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 77.4,
+      "duration_s": 9.0
+    },
+    {
+      "index": 9,
+      "move": "green medium[2,0] (niv. 0) -> zone_green (niv. 1)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 88.2,
+      "duration_s": 9.0
+    },
+    {
+      "index": 10,
+      "move": "red medium[2,1] (niv. 0) -> zone_red (niv. 2)",
+      "purpose": "sort",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 99.0,
+      "duration_s": 9.0
+    }
+  ],
+  "transitions": [
+    [
+      "OBSERVE",
+      "observed",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "goal_reached",
+      "DONE"
+    ]
+  ],
+  "scenario": "sort_17",
+  "seed": 17,
+  "tags": [
+    "sort",
+    "stacked"
+  ],
+  "note": "8 cuburi de sortat",
+  "perception": "oracle",
+  "dry_run": false,
+  "arm": "mock",
+  "faults": [],
+  "success": true,
+  "truth_problems": [],
+  "expected_success": true,
+  "simulated_time_s": 109.8,
+  "within_time_limit": true,
+  "sim_events": [],
+  "world_final": [
+    "medium: gol",
+    "buffer_1: gol",
+    "buffer_2: gol",
+    "zone_red: red-red-red",
+    "zone_yellow: yellow-yellow",
+    "zone_green: green-green",
+    "zone_blue: blue-blue-blue"
+  ],
+  "wall_time_s": 0.06,
+  "note_timing": "timpi SIMULAȚI (SimDurations), nu măsurători"
+}

@@ -1,17 +1,13 @@
-"""SimWorld, SimulatedProximity, ManualClock, correct_parallax și validarea argumentelor brațului."""
-
-import dataclasses
+"""SimWorld, ManualClock, correct_parallax și validarea argumentelor brațului."""
 
 import pytest
 
 from brain.adapters.arm import validation as v
 from brain.adapters.clock import ManualClock
-from brain.adapters.proximity.simulated import ProximityFaults, SimulatedProximity
 from brain.domain.errors import DomainValidationError, InvalidCommand
 from brain.domain.plan import correct_parallax
-from brain.domain.proximity import Validity
 from brain.simulation.sim_world import (
-    COLLISION, DROPPED, GRASPED, MISSED, NOTHING_HELD, PLACED, UNREACHABLE, Hover, SimCube, SimGrid, SimPhysics, SimWorld,
+    COLLISION, DROPPED, GRASPED, MISSED, NOTHING_HELD, PLACED, UNREACHABLE, SimCube, SimGrid, SimPhysics, SimWorld,
     SimZone,
 )
 
@@ -92,37 +88,6 @@ def test_drop_in_transit_lands_on_free_cell_or_is_lost():
     lossy.pick("medium", (0, 0), 0, 0.0, None)
     lossy.drop_held_in_transit()
     assert len(lossy.lost) == 1
-
-
-# ---------------------------------------------------------------------- SimulatedProximity
-def _sensor(app_config, world, faults=None, s=25.0):
-    config = dataclasses.replace(app_config.system.proximity, enabled=True)
-    return SimulatedProximity(world, config, ManualClock(), sensor_above_jaw_mm=s, noise_mm=0.0, faults=faults, seed=3)
-
-
-def test_proximity_held_cube_below_and_nothing(app_config):
-    world, grid = _world()
-    sensor = _sensor(app_config, world)
-    assert sensor.read().value_mm == pytest.approx(250.0, abs=3)  # poza de observare: masa e departe
-    grid.stack((0, 0)).append(_cube(world))
-    world.pick("medium", (0, 0), 0, 0.0, None)
-    assert sensor.read().validity is Validity.BELOW_RANGE  # cub ținut chiar sub senzor
-    world.place("medium", (0, 0), 0, 0.0)
-    assert sensor.read().value_mm == pytest.approx(30.0 + 25.0, abs=3)  # cub sub gheară: ≈ 30 + s
-    world.hover = Hover("medium", (1, 1), 0)
-    assert sensor.read().value_mm == pytest.approx(60.0 + 25.0, abs=3)  # nimic: ≈ 60 + s
-
-
-def test_proximity_injected_faults(app_config):
-    world, _ = _world()
-    sensor = _sensor(app_config, world, ProximityFaults(timeout_probability=1.0))
-    reading = sensor.read()
-    assert reading.validity is Validity.TIMEOUT and reading.value_mm is None
-    disconnected = _sensor(app_config, world, ProximityFaults(disconnect_after=2))
-    assert [disconnected.read().validity for _ in range(4)][-1] is Validity.DISCONNECTED
-    invalid = _sensor(app_config, world, ProximityFaults(invalid_probability=1.0))
-    assert invalid.read().validity is Validity.INVALID_DATA
-    assert sensor.spec().confirmed is False
 
 
 # ---------------------------------------------------------------------- ceas, paralaxă, validare

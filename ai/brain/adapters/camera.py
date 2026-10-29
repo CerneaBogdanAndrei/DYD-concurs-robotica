@@ -65,16 +65,31 @@ class LoopingFileCamera:
 
 
 class UsbCamera:  # pragma: no cover - necesită cameră fizică
-    def __init__(self, index: int = 0, width: int = 640, height: int = 480, flush: int = 4) -> None:
+    """Camera USB. Cere MJPG la `fps`: multe camere dau 30 fps la 640x480 doar comprimat (YUYV: 10-15 fps).
+    Bufferul de un cadru ține imaginea la zi (fără cadre vechi la previzualizare)."""
+
+    def __init__(self, index: int = 0, width: int = 640, height: int = 480, flush: int = 4, fps: int = 30) -> None:
         import cv2
 
         self._cv2 = cv2
         self._capture = cv2.VideoCapture(index)
+        self._capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
         self._capture.set(cv2.CAP_PROP_FRAME_WIDTH, width)
         self._capture.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+        self._capture.set(cv2.CAP_PROP_FPS, fps)
+        self._capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         self._flush = flush
         if not self._capture.isOpened():
             raise PerceptionInputError("camera {} nu poate fi deschisă (index, cablu, alt program o folosește?)".format(index))
+
+    def describe(self) -> str:
+        """Modul negociat efectiv cu camera (poate diferi de cel cerut)."""
+        cv2 = self._cv2
+        code = int(self._capture.get(cv2.CAP_PROP_FOURCC))
+        fourcc = "".join(chr((code >> (8 * i)) & 0xFF) for i in range(4)) if code else "?"
+        return "{}x{} {} {:.0f} fps".format(int(self._capture.get(cv2.CAP_PROP_FRAME_WIDTH)),
+                                            int(self._capture.get(cv2.CAP_PROP_FRAME_HEIGHT)), fourcc,
+                                            self._capture.get(cv2.CAP_PROP_FPS))
 
     def grab(self, count: int) -> List[np.ndarray]:
         for _ in range(self._flush):

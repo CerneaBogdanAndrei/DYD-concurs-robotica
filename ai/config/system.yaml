@@ -112,23 +112,6 @@ arm:
   calib_json: null            # opțional: calib.json al serviciului, pentru costul unghiular estimat
   settle_s: 0.6               # așteptare după go_pose înainte de captură (SETTLE_S în referință)
 
-proximity:
-  enabled: false              # true doar după montarea și verificarea senzorului
-  model: "HC-SR04 (presupus din intervalul 2-400 cm; de confirmat)"
-  min_range_mm: 20
-  max_range_mm: 4000
-  resolution_mm: 3
-  max_rate_hz: 16             # ~60 ms între măsurători (recomandarea uzuală pentru HC-SR04)
-  beam_half_angle_deg: 15
-  samples: 5                  # mediana a 5 citiri
-  mount: coaxial              # coaxial (pe gheară, privește în jos printre fălci) | none
-  sensor_above_jaw_mm: null   # NECALIBRAT: distanța pe verticală dintre senzor și vârful fălcilor
-  hover_above_target_mm: 45   # HOVER_DZ al serviciului: după pick/place gheara stă la 45 mm deasupra țintei
-  tolerance_mm: 12
-  required: false             # true: fără senzor funcțional, execuția se oprește
-  stop_distance_mm: null      # prag critic NEVALIDAT; null = dezactivat
-  calibrated: false
-
 timing:                       # NEMĂSURAT: estimări inițiale, înlocuiți-le cu `python -m brain report timings`
   task_limit_s: 300
   reserve_s: 20
@@ -153,13 +136,14 @@ planning:
   cost:                       # costul Greedy (grade estimate de mișcare)
     radial_deg_per_mm: 0.5
     adjacent_stack_penalty_deg: 20
+    adjacent_cube_penalty_deg: 15  # NECALIBRAT: per vecin ocupat; gheara deschisă lovește cuburile alăturate
     location_switch_deg: 30   # folosit doar ca substitut, când geometria robotului nu e cunoscută
 
 # Previzualizarea camerei din browser (Pi fără ecran): python -m brain camera preview
 preview:
   host: 0.0.0.0               # 0.0.0.0 = vizibil din rețeaua locală (doar citire); 127.0.0.1 = doar pe Pi
   port: 8080
-  max_fps: 10                 # limitează fluxul live (procesorul Pi-ului e folosit și de analiză)
+  max_fps: 30                 # cât dă camera (640x480, 30 fps în MJPG); analiza rulează separat, la analyze_interval_s
   jpeg_quality: 80
   analyze_interval_s: 1.0     # cât de des se reface analiza adnotată (grila + celulele)
   save_dir: out/preview       # ultimele imagini (brută + adnotată) și observația, suprascrise la fiecare analiză

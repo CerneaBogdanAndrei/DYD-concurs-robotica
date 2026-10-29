@@ -1,0 +1,213 @@
+{
+  "schema_version": 2,
+  "scene_id": "memorie-reproduce_1",
+  "created_at": "2026-10-29T16:14:20Z",
+  "updated_at": "2026-10-29T16:14:20Z",
+  "locations": {
+    "medium": {
+      "rows": 3,
+      "cols": 3,
+      "observed_at": "2026-10-29T16:14:20Z",
+      "source": "perception",
+      "cells": [
+        {
+          "row": 0,
+          "col": 0,
+          "occupancy": "occupied",
+          "occupancy_confidence": 0.98,
+          "stack": [
+            {
+              "color": "red",
+              "color_confidence": 0.95,
+              "yaw_deg": -0.39,
+              "yaw_confidence": 0.9,
+              "top_face": "full",
+              "cube_id": null,
+              "uv_top": [
+                0.3544,
+                0.3388
+              ]
+            }
+          ],
+          "reasons": []
+        },
+        {
+          "row": 0,
+          "col": 1,
+          "occupancy": "occupied",
+          "occupancy_confidence": 0.98,
+          "stack": [
+            {
+              "color": "blue",
+              "color_confidence": 0.95,
+              "yaw_deg": 3.39,
+              "yaw_confidence": 0.9,
+              "top_face": "full",
+              "cube_id": null,
+              "uv_top": [
+                1.5083,
+                0.3518
+              ]
+            }
+          ],
+          "reasons": []
+        },
+        {
+          "row": 0,
+          "col": 2,
+          "occupancy": "occupied",
+          "occupancy_confidence": 0.98,
+          "stack": [
+            {
+              "color": "blue",
+              "color_confidence": 0.95,
+              "yaw_deg": 0.87,
+              "yaw_confidence": 0.9,
+              "top_face": "full",
+              "cube_id": null,
+              "uv_top": [
+                2.6505,
+                0.3466
+              ]
+            }
+          ],
+          "reasons": []
+        },
+        {
+          "row": 1,
+          "col": 0,
+          "occupancy": "occupied",
+          "occupancy_confidence": 0.98,
+          "stack": [
+            {
+              "color": "yellow",
+              "color_confidence": 0.95,
+              "yaw_deg": 10.02,
+              "yaw_confidence": 0.9,
+              "top_face": "icon",
+              "cube_id": null,
+              "uv_top": [
+                0.3995,
+                1.5804
+              ]
+            }
+          ],
+          "reasons": []
+        },
+        {
+          "row": 1,
+          "col": 1,
+          "occupancy": "occupied",
+          "occupancy_confidence": 0.98,
+          "stack": [
+            {
+              "color": "blue",
+              "color_confidence": 0.95,
+              "yaw_deg": 2.5,
+              "yaw_confidence": 0.9,
+              "top_face": "icon",
+              "cube_id": null,
+              "uv_top": [
+                1.5561,
+                1.5615
+              ]
+            }
+          ],
+          "reasons": []
+        },
+        {
+          "row": 1,
+          "col": 2,
+          "occupancy": "occupied",
+          "occupancy_confidence": 0.98,
+          "stack": [
+            {
+              "color": "red",
+              "color_confidence": 0.95,
+              "yaw_deg": 0.82,
+              "yaw_confidence": 0.9,
+              "top_face": "full",
+              "cube_id": null,
+              "uv_top": [
+                2.6457,
+                1.5009
+              ]
+            }
+          ],
+          "reasons": []
+        },
+        {
+          "row": 2,
+          "col": 0,
+          "occupancy": "empty",
+          "occupancy_confidence": 0.98,
+          "stack": [],
+          "reasons": []
+        },
+        {
+          "row": 2,
+          "col": 1,
+          "occupancy": "occupied",
+          "occupancy_confidence": 0.98,
+          "stack": [
+            {
+              "color": "red",
+              "color_confidence": 0.95,
+              "yaw_deg": -2.59,
+              "yaw_confidence": 0.9,
+              "top_face": "icon",
+              "cube_id": null,
+              "uv_top": [
+                1.4662,
+                2.6413
+              ]
+            }
+          ],
+          "reasons": []
+        },
+        {
+          "row": 2,
+          "col": 2,
+          "occupancy": "occupied",
+          "occupancy_confidence": 0.98,
+          "stack": [
+            {
+              "color": "yellow",
+              "color_confidence": 0.95,
+              "yaw_deg": 0.9,
+              "yaw_confidence": 0.9,
+              "top_face": "full",
+              "cube_id": null,
+              "uv_top": [
+                2.6312,
+                2.6211
+              ]
+            }
+          ],
+          "reasons": []
+        }
+      ]
+    }
+  },
+  "zones": {
+    "buffer_1": {
+      "source": "memory",
+      "stack": [
+        {
+          "color": "yellow",
+          "color_confidence": 0.95,
+          "yaw_deg": null,
+          "yaw_confidence": 0.0,
+          "top_face": "full",
+          "cube_id": null,
+          "uv_top": null
+        }
+      ]
+    },
+    "buffer_2": {
+      "source": "memory",
+      "stack": []
+    }
+  },
+  "metadata": {}
+}

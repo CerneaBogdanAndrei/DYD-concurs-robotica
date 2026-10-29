@@ -1,0 +1,158 @@
+{
+  "task": "tower",
+  "goal": "turn blue-blue-green-blue pe medium[2,2]",
+  "final_state": "DONE",
+  "goal_reached": true,
+  "budget_exhausted": false,
+  "unmet": [],
+  "warnings": [],
+  "error": null,
+  "elapsed_s": 45.0,
+  "moves_attempted": 4,
+  "move_outcomes": {
+    "ok": 4
+  },
+  "observations": 5,
+  "arm_commands": 13,
+  "first_plan": [
+    " 1. blue medium[2,0] (niv. 0) -> medium[2,2] (niv. 0): nivelul 0 al turnului: albastru [cost substitut]",
+    " 2. blue medium[1,0] (niv. 0) -> medium[2,2] (niv. 1): nivelul 1 al turnului: albastru [cost substitut]",
+    " 3. green medium[0,1] (niv. 0) -> medium[2,2] (niv. 2): nivelul 2 al turnului: verde [cost substitut]",
+    " 4. blue medium[1,1] (niv. 0) -> medium[2,2] (niv. 3): nivelul 3 al turnului: albastru [cost substitut]"
+  ],
+  "first_plan_estimated_s": 50.0,
+  "last_plan": [],
+  "moves": [
+    {
+      "index": 1,
+      "move": "blue medium[2,0] (niv. 0) -> medium[2,2] (niv. 0)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 1.8,
+      "duration_s": 9.0
+    },
+    {
+      "index": 2,
+      "move": "blue medium[1,0] (niv. 0) -> medium[2,2] (niv. 1)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 12.6,
+      "duration_s": 9.0
+    },
+    {
+      "index": 3,
+      "move": "green medium[0,1] (niv. 0) -> medium[2,2] (niv. 2)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 23.4,
+      "duration_s": 9.0
+    },
+    {
+      "index": 4,
+      "move": "blue medium[1,1] (niv. 0) -> medium[2,2] (niv. 3)",
+      "purpose": "goal",
+      "outcome": "ok",
+      "detail": "",
+      "started_s": 34.2,
+      "duration_s": 9.0
+    }
+  ],
+  "transitions": [
+    [
+      "OBSERVE",
+      "observed",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "move_selected",
+      "EXECUTE"
+    ],
+    [
+      "EXECUTE",
+      "executed",
+      "VERIFY"
+    ],
+    [
+      "VERIFY",
+      "verified",
+      "PLAN"
+    ],
+    [
+      "PLAN",
+      "goal_reached",
+      "DONE"
+    ]
+  ],
+  "scenario": "tower_4",
+  "seed": 4,
+  "tags": [
+    "tower"
+  ],
+  "note": "turn blue-blue-green-blue pe medium[2,2]",
+  "perception": "oracle",
+  "dry_run": false,
+  "arm": "mock",
+  "faults": [],
+  "success": true,
+  "truth_problems": [],
+  "expected_success": true,
+  "simulated_time_s": 45.0,
+  "within_time_limit": true,
+  "sim_events": [],
+  "world_final": [
+    "medium: r2c2:blue-blue-green-blue",
+    "buffer_1: gol",
+    "buffer_2: gol"
+  ],
+  "wall_time_s": 0.03,
+  "note_timing": "timpi SIMULAȚI (SimDurations), nu măsurători"
+}

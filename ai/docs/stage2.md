@@ -28,7 +28,6 @@ Data: 2026-10-29. Lucrat pe Raspberry Pi (Debian 13, aarch64, Python 3.13.5, Nod
 | `brain/orchestration/session.py` | `ArmSession` (verificarea modului simulare/braț real, cronometrarea fiecărei comenzi, jurnal de durate, oprire între comenzi), `TimeBudget`. |
 | `brain/orchestration/observer.py` | `LocationObserver`: `go_pose` → `settle_s` → captură → viziune, reîncercări, publicare în `PreviewHub`. |
 | `brain/orchestration/memory_merge.py` | Îmbinarea observației (doar vârfurile) cu memoria (nivelurile ascunse); efectul așteptat al unei mutări; estimarea înălțimii din mărimea aparentă a feței de sus. |
-| `brain/orchestration/proximity_check.py` | Verificarea prin senzor după pick/place: ținut (BELOW_RANGE) / cub sub gheară (≈30+s) / nimic (≈60+s); cu `s` necunoscut doar ținut/neținut. |
 | `brain/orchestration/fsm.py` | FSM-ul `OBSERVE → PLAN → EXECUTE → VERIFY → … → DONE/ERROR`, tabel explicit de tranziții (`TRANSITIONS`), recuperare, raport. |
 | `brain/adapters/arm/tee_arm.py` | `TeeArm`: comenzile merg și la serviciul colegilor (pornit cu `--sim`), și la `MockArm` (lumea simulată). |
 | `brain/simulation/scenario.py` | Scenarii (exemplele S1/S2, aleatoare), percepția „oracol”, camera sintetică pentru o lume, verificarea finală pe adevăr. |
@@ -42,7 +41,7 @@ python -m brain sim run --task tower --example --gif out/s2.gif            # exe
 python -m brain sim run --task tower --order red,yellow,green --target medium:r0c0 --dry-run
 python -m brain sim run --task reproduce --example --buffers 2              # exemplul S1
 python -m brain sim run --task reproduce --target-file tinta.yaml --buffers 1
-python -m brain sim run --task sort --seed 5 --proximity --faults pick:grasp_fail@2,place:drop@4
+python -m brain sim run --task sort --seed 5 --faults pick:grasp_fail@2,place:drop@4
 python -m brain sim run --task all --random 20 --perception oracle --buffers 2
 python -m brain sim run --task tower --example --service-url http://127.0.0.1:8765   # prin serviciul colegilor (npm run sim)
 
@@ -113,7 +112,7 @@ percepție, §6.8).
 |---|---|---|---|
 | S2: turn roșu-galben-verde-albastru-roșu pe medium r1c1 | 5 | 55,8 s | reușit |
 | S1: aranjamentul 3×3 amestecat pe același caroiaj, 2 puncte tampon | 9 | 99,0 s | reușit (fără puncte tampon: imposibil, raportat explicit) |
-| S3: seed 7, senzor de proximitate, prindere ratată + cub căzut injectate | 13 | 145,5 s | reușit |
+| S3: seed 7, senzor de proximitate (eliminat ulterior), prindere ratată + cub căzut injectate | 13 | 145,5 s | reușit |
 
 **Scenarii aleatoare** (`out/etapa2/random_*`, cu 2 puncte tampon):
 
@@ -141,7 +140,7 @@ toate celulele lui `medium`, cele 4 zone și 2 puncte tampon acceptă `place` pe
 | Brațul real, camera reală, timpii | **nevalidat**: nicio mișcare reală, niciun cadru real |
 | Pozele `observe_medium`, celulele, zonele, punctele tampon | **necalibrate** (de învățat cu `npm run calib`) |
 | `camera_height_mm`, `nadir_uv`, `line_width_mm`, culorile HSV, latura cubului | NECALIBRATE; afectează paralaxa, estimarea înălțimii și culoarea |
-| Senzorul de proximitate | doar simulat; `proximity.enabled: false`; `sensor_above_jaw_mm` necunoscut |
+| Senzorul de proximitate | **eliminat** (decizia echipei, 2026-10-29): verificarea se face doar cu camera |
 | Zonele S3 | camera nu le vede: conținutul lor vine din memorie (și din senzor, dacă e activ). Cuburile deja puse pe zone înainte de start trebuie date brain-ului (în simulare, prin memoria de pornire) |
 | Cuburi în afara caroiajului (pe restul foii) | nu sunt văzute și nu pot fi luate: serviciul acceptă doar celule și puncte calibrate |
 | Turnuri înalte | verificarea vizuală e mai slabă pe celulele vecine (vezi protecțiile de mai sus); stivele de ≥ 3 cuburi pe care brain-ul nu le-a construit nu pot fi măsurate sigur |
@@ -152,5 +151,5 @@ toate celulele lui `medium`, cele 4 zone și 2 puncte tampon acceptă `place` pe
 ## Ce urmează (Etapa 3, după confirmare)
 
 `scripts/pi_doctor.sh`, `scripts/pi_install.sh`, planul de test live (`docs/live-test-plan.md`), calibrarea pozelor și
-a celulelor pe braț, `calib corners` și HSV în lumina sălii, adaptorul HC-SR04 (dacă îl citește brain-ul), secțiunea
+a celulelor pe braț, `calib corners` și HSV în lumina sălii, secțiunea
 „Ziua concursului” din README.

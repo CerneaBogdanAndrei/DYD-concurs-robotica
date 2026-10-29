@@ -1,5 +1,11 @@
 # Prompt pentru sesiunea următoare — proiectul „Brain” (CRI 2026)
 
+> **Actualizare 2026-10-29 seara (au prioritate față de restul textului):** senzorul de proximitate (HC-SR04) a fost
+> ELIMINAT din cod și din planuri; brațul e recalibrat pe foaia MICĂ (medium nu încăpea în cameră); previzualizarea
+> merge la 30 fps (MJPG); planificarea penalizează vecinii ocupați (`adjacent_cube_penalty_deg`). Problema principală
+> pe braț: gheara coboară deschisă la `GRIP_OPEN` = 60 și lovește cuburile alăturate (constatările 12–13 din
+> `questions-for-kinematics-team.md`). Etapa 2 e implementată (vezi `stage2.md`, `sesiune-2026-10-29-pi.md`).
+
 Continuă proiectul „Brain” pentru brațul Yahboom DOFBOT (concursul CRI 2026). Răspunde-mi în română.
 
 ## 0. Reguli de lucru (obligatorii)

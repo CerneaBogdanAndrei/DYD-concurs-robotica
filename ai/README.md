@@ -40,7 +40,7 @@ Pe Linux / Pi, înlocuiți `.venv\Scripts\python` cu `.venv/bin/python`.
 python -m brain sim run --task tower --example --gif out/s2.gif                    # exemplul S2, viziunea reală pe camera sintetică
 python -m brain sim run --task tower --order red,yellow,green --target medium:r0c0
 python -m brain sim run --task reproduce --example --buffers 2                       # exemplul S1 (cere un punct tampon)
-python -m brain sim run --task sort --seed 5 --proximity --faults pick:grasp_fail@2
+python -m brain sim run --task sort --seed 5 --faults pick:grasp_fail@2
 python -m brain sim run --task all --random 20 --perception oracle --buffers 2       # 60 de scenarii, rata de succes
 python -m brain report timings --journal out/sim_run/timings.jsonl
 ```
