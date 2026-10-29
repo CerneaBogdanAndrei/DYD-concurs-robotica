@@ -219,6 +219,7 @@ export class ArmService {
       joints: this.robot.cur,
       grip: this.robot.grip,
       xyz: this.robot.curXyz,
+      last_grasp: this.robot.lastGrasp,
       cube_mm: C.CUBE_MM,
       /** gheara se poate comanda în mm (grip_mm / release_mm); intervalul măsurat */
       grip_calibrated: table.length > 0,

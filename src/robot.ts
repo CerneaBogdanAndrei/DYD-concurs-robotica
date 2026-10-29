@@ -50,6 +50,8 @@ export class Robot {
   cur: number[] = [...C.HOME, C.GRIP_OPEN];
   /** poziția carteziană curentă (dacă e cunoscută) */
   curXyz: Vec3 | null = null;
+  /** la ultima prindere, jos: unghiurile comandate, citite înainte și după închiderea ghearei (diagnoză) */
+  lastGrasp: { sent: number[]; bottom: (number | null)[]; closed: (number | null)[] } | null = null;
   /** yaw-ul și înclinarea ghearei la ultima mișcare carteziană (pentru ridicarea pe loc) */
   private curYaw = 0.0;
   private curPitch = -90;
@@ -225,7 +227,10 @@ export class Robot {
     if (this.grip !== openGrip) await this.gripper(openGrip);
     await this.approach(x, y, zh, yaw, p);
     await this.line(x, y, zh, z, yaw, p, C.T_FINE, C.VERTICAL_STEPS);
+    const sent = [...this.cur];
+    const bottom = await this.read();
     await this.gripper(C.GRIP_CLOSED);
+    this.lastGrasp = { sent, bottom, closed: await this.read() };
     await this.line(x, y, z, zh, yaw, p, C.T_FINE, C.VERTICAL_STEPS);
   }
 
