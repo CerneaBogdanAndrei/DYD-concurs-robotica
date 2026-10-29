@@ -12,21 +12,21 @@ cube:
 # Numele TREBUIE să coincidă cu locurile calibrate în serviciul de mișcare (npm run calib -- celule NUME),
 # iar observe_pose cu pozele învățate (npm run calib -- poza NUME).
 locations:
-  small:                      # foaia folosită acum (brațul recalibrat pe ea). Măsurat 2026-10-29 cu rigla: celulă
+  small:                      # foaia de pe masă, calibrată pe Pi (calib.json: observe_small, small). Măsurat 2026-10-29 cu rigla: celulă
     rows: 3                   # 4,5 cm pe lățimea foii x 4,3 cm pe lungime; margini sus 1 cm, stânga 4,9 cm, dreapta
     cols: 3                   # 2,8 cm, sub caroiaj 15,9 cm (4,9 + 13,5 + 2,8 = 21,2 cm; 1 + 12,9 + 15,9 = 29,8 cm: A4 ±2 mm)
-    cell_mm: 44.0             # media 45 x 43 (codul presupune celule pătrate; abaterea de ±1 mm e neglijabilă)
-    line_width_mm: 2.0        # NECALIBRAT
+    cell_mm: 44.0             # MĂSURAT cu rigla: media 45 x 43 (codul presupune celule pătrate; ±1 mm e neglijabil)
+    line_width_mm: 0.8        # MĂSURAT din poză: 5-6 px la 312 px/celulă ≈ 0,7-0,8 mm (±0,2 mm)
     orientation_quarter_turns: 0
     observe_pose: observe_small
     camera_height_mm: 250.0   # NECALIBRAT: înălțimea camerei peste masă în poza de observare (paralaxă)
     nadir_uv: [1.5, 1.5]      # punctul de sub cameră, în coordonate de celulă (implicit centrul grilei)
     expected_corners_px: null # opțional: colțurile grilei în imagine; alege grila corectă când se văd mai multe
-  medium:                     # foaia aleasă. Măsurat 2026-10-29 (poza cu rigla): celulă 4,3 cm; pe foaie,
-    rows: 3                   # margini sus 1 cm, stânga 4,7 cm, dreapta 2,8 cm, sub caroiaj 15,9 cm
-    cols: 3                   # (4,7 + 12,9 + 2,8 = 20,4 cm, nu 21: o nepotrivire de ~6 mm, de remăsurat)
-    cell_mm: 43.0             # MĂSURAT cu rigla, precizie ~1 mm
-    line_width_mm: 0.8        # MĂSURAT din poză: 5-6 px la 312 px/celulă ≈ 0,7-0,8 mm (±0,2 mm)
+  medium:                     # NEMĂSURAT: valorile de mai jos erau ale foii MICI (calibrată pe Pi sub numele medium,
+    rows: 3                   # corectat 2026-10-29 în small). Foaia medium reală nu e măsurată și nici calibrată.
+    cols: 3
+    cell_mm: 43.0             # NECALIBRAT pentru foaia medium (testele sintetice folosesc această valoare)
+    line_width_mm: 0.8        # NECALIBRAT pentru foaia medium
     orientation_quarter_turns: 0
     observe_pose: observe_medium
     camera_height_mm: 250.0   # NECALIBRAT

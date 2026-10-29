@@ -1,5 +1,9 @@
 # Calibrarea pe braț, 2026-10-29 (Raspberry Pi, brațul real)
 
+> **Corectură (2026-10-29 seara):** foaia calibrată aici era foaia MICĂ, nu medium (configurația o numea
+> atunci medium). În `calib.json` poza a fost redenumită `observe_small`, iar caroiajul `small`; punctele învățate
+> sunt neschimbate. Măsurătorile corecte ale foii: celulă 45 x 43 mm (vezi `config/system.yaml`).
+
 Foaia `medium` e mutată cu ~3 cm mai departe de robot decât poziția inițială și lipită cu bandă. Nu se mută.
 
 ## În `calib.json` (rădăcina repo-ului, nu e în git)
