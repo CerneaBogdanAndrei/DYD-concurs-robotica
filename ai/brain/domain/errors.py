@@ -68,6 +68,13 @@ class ArmTimeout(ArmCommunicationError):
     """Comanda nu s-a terminat în timpul permis. Starea fizică e NECUNOSCUTĂ."""
 
 
+class MotionAborted(ArmError):
+    """Serviciul a oprit un pick/place după ce brațul s-ar fi putut mișca (de ex. limită articulară pe traseu).
+
+    Serviciul răspunde, dar poziția brațului e incertă: urmează `go_pose(observe_*)` și reobservare.
+    """
+
+
 class CapabilityUnavailable(ArmError):
     """Adaptorul nu oferă funcția cerută. Nu se raportează niciodată un succes fals."""
 

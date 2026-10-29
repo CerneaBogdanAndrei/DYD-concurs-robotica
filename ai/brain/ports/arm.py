@@ -10,12 +10,16 @@ Semantică comună tuturor metodelor:
   (adaptorul convertește spre convenția serviciului);
 - `InvalidCommand`: comanda e respinsă înainte de trimitere, brațul nu s-a mișcat;
 - `CalibrationMissing`: poza/locul nu e calibrat;
+- `MotionAborted`: serviciul a oprit un pick/place pe traseu (de ex. limită articulară); serviciul răspunde,
+  dar poziția e incertă → `go_pose(observe_*)` și reobservare;
 - `ArmCommunicationError` / `ArmTimeout`: starea fizică e NECUNOSCUTĂ; nicio repetare automată,
   niciun `home()` automat; urmează reobservare sau intervenție manuală;
 - `CapabilityUnavailable`: adaptorul nu are funcția (niciodată un succes fals).
 
 `pick`/`place` întorc `True` dacă secvența s-a executat fără eroare detectată și `False` dacă ținta e
-inaccesibilă (motivul în `last_reason`; de regulă brațul nu a coborât). `True` NU dovedește că
+inaccesibilă (motivul în `last_reason`). Cu `False` brațul NU a coborât, dar poate să se fi deplasat pe traseu
+(constatarea 1 din `docs/questions-for-kinematics-team.md`): `position_uncertain` devine True până la
+următorul `home`/`go_pose`. `True` NU dovedește că
 cubul a fost prins sau așezat: confirmarea vine din viziune și, opțional, din senzorul de proximitate.
 """
 
@@ -41,6 +45,8 @@ class ArmInterface(Protocol):
     mode: str
     #: motivul ultimului pick/place care a întors False
     last_reason: Optional[str]
+    #: True după un pick/place = False sau o eroare cu stare necunoscută; resetat de home/go_pose
+    position_uncertain: bool
 
     def home(self) -> None:
         """Aduce brațul în configurația sigură de repaus."""

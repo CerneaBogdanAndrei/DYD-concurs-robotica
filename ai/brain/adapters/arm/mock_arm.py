@@ -78,6 +78,7 @@ class MockArm:
         self.faults = list(faults)
         self.rng = np.random.default_rng(seed)
         self.last_reason: Optional[str] = None
+        self.position_uncertain = False  # ca la TeamArm: True după False sau o eroare cu stare necunoscută
         self.current_pose: Optional[str] = None
         self.joints: List[float] = [90.0, 90.0, 90.0, 90.0, 90.0, 90.0]
         self.gripper_open = False
@@ -108,8 +109,9 @@ class MockArm:
         record.result = result
         return result
 
-    @staticmethod
-    def _raise(record: CommandRecord, kind: str, method: str) -> None:
+    def _raise(self, record: CommandRecord, kind: str, method: str) -> None:
+        if kind in ("timeout", "comm_error"):
+            self.position_uncertain = True
         if kind == "timeout":
             record.error = "timeout"
             raise ArmTimeout("{}: timeout simulat (starea fizică necunoscută)".format(method))
@@ -139,6 +141,7 @@ class MockArm:
         if kind:
             self._raise(record, kind, "home")
         self.current_pose = "home"
+        self.position_uncertain = False
         self.world.hover = None
         self.joints[:5] = [90.0] * 5
         self._finish(record, self.durations.home_s)
@@ -153,6 +156,7 @@ class MockArm:
         if kind:
             self._raise(record, kind, "go_pose")
         self.current_pose = name
+        self.position_uncertain = False
         self.world.hover = None
         factor = 2.0 if speed == "slow" else 1.0
         self._finish(record, self.durations.go_pose_s * factor)
@@ -206,11 +210,13 @@ class MockArm:
             self._raise(record, kind, "pick")
         if kind == "unreachable":
             self.last_reason = "punct inaccesibil (simulat)"
+            self.position_uncertain = True
             return self._finish(record, 0.05, False)
         outcome = self.world.pick(location, cell, level, args["yaw_deg"], args["uv"], force_miss=kind == "grasp_fail")
         self.current_pose = None
         if outcome == UNREACHABLE:
             self.last_reason = "punct inaccesibil {}{}".format(location, cell or "")
+            self.position_uncertain = True
             return self._finish(record, 0.05, False)
         if kind == "drop" and outcome == GRASPED:
             self.world.drop_held_in_transit()
@@ -232,6 +238,7 @@ class MockArm:
             self._raise(record, kind, "place")
         if kind == "unreachable":
             self.last_reason = "punct inaccesibil (simulat)"
+            self.position_uncertain = True
             return self._finish(record, 0.05, False)
         if kind == "drop":
             self.world.drop_held_in_transit()
@@ -239,6 +246,7 @@ class MockArm:
         self.current_pose = None
         if outcome == UNREACHABLE:
             self.last_reason = "punct inaccesibil {}{}".format(location, cell or "")
+            self.position_uncertain = True
             return self._finish(record, 0.05, False)
         self.gripper_open = True
         self.last_reason = None

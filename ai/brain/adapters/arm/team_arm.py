@@ -2,8 +2,13 @@
 
 Implementat direct după contractul HTTP din `docs/CONTRACT_BRAT.md` (repo-ul de mișcare), doar cu
 biblioteca standard. Diferențe de convenție tratate aici:
-- yaw: serviciul măsoară unghiul în imaginea redresată de la axa coloanelor spre `r` crescător
-  (sens orar pe ecran); sistemul folosește sens antiorar pozitiv → semnul se inversează;
+- yaw la caroiaj: serviciul măsoară unghiul în imaginea redresată de la axa coloanelor spre `r` crescător
+  (sens orar pe ecran); sistemul folosește sens antiorar pozitiv → semnul se inversează. La zone
+  (`cell` = None) yaw-ul e în sistemul robotului și se trimite neschimbat;
+- `pick`/`place` = False: serviciul poate să fi mișcat brațul înainte să constate că ținta e inaccesibilă
+  (tranzitul nu e verificat în avans) → `position_uncertain`; urmează `go_pose(observe_*)`;
+- eroarea `limite` în timpul unui `pick`/`place` → `MotionAborted` (brațul poate să se fi mișcat), nu
+  `InvalidCommand` (care garantează că brațul a rămas pe loc);
 - `speed`: serviciul are doar "fast" și "slow"; "medium" e trimis ca "slow" (variantă prudentă);
 - funcțiile pe care serviciul nu le oferă (deschidere parțială, bip de altă durată) ridică
   `CapabilityUnavailable` în loc să raporteze un succes fals.
@@ -25,6 +30,7 @@ from brain.domain.errors import (
     CalibrationMissing,
     CapabilityUnavailable,
     InvalidCommand,
+    MotionAborted,
 )
 from brain.ports.arm import MODE_HARDWARE, MODE_SIMULATION
 
@@ -42,6 +48,10 @@ class TeamArm:
         self.timeout_s = float(timeout_s)
         self.last_reason: Optional[str] = None
         self.mode = MODE_HARDWARE
+        #: True după un pick/place = False sau o eroare cu stare necunoscută; resetat de home/go_pose
+        self.position_uncertain = False
+        #: tipul fiecărui loc ("grid" | "point"), citit din `status.sites` la `connect()`
+        self.sites: Dict[str, str] = {}
 
     # ------------------------------------------------------------------ transport
     def _call(self, name: str, body: Optional[Dict[str, Any]] = None) -> Any:
@@ -53,10 +63,15 @@ class TeamArm:
             with urllib.request.urlopen(request, timeout=self.timeout_s) as response:
                 payload = json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
-            raise self._service_error(exc) from None
+            error = self._service_error(exc, name)
+            if isinstance(error, (ArmCommunicationError, MotionAborted)):
+                self.position_uncertain = True
+            raise error from None
         except socket.timeout:
+            self.position_uncertain = True
             raise ArmTimeout("{}: serviciul nu a răspuns în {} s (starea brațului e necunoscută)".format(name, self.timeout_s)) from None
         except (urllib.error.URLError, ConnectionError, OSError) as exc:
+            self.position_uncertain = True
             reason = getattr(exc, "reason", exc)
             if isinstance(reason, socket.timeout):
                 raise ArmTimeout("{}: timeout la {}".format(name, self.url)) from None
@@ -68,13 +83,15 @@ class TeamArm:
         return payload
 
     @staticmethod
-    def _service_error(exc: "urllib.error.HTTPError") -> Exception:
+    def _service_error(exc: "urllib.error.HTTPError", name: str = "") -> Exception:
         try:
             error = json.loads(exc.read().decode("utf-8"))["error"]
             code, message = str(error.get("code", "hardware")), str(error.get("message", ""))
         except Exception:
             return ArmCommunicationError("HTTP {} fără detalii de la serviciu".format(exc.code))
         text = "[{}] {}".format(code, message)
+        if code == "limite" and name in ("pick", "place"):
+            return MotionAborted(text)
         if code in ("argument", "limite"):
             return InvalidCommand(text)
         if code == "calibrare":
@@ -88,6 +105,8 @@ class TeamArm:
         if not isinstance(result, bool):
             raise ArmCommunicationError("rezultat pick/place invalid: {!r}".format(result))
         self.last_reason = None if result else str(payload.get("reason") or "motiv nespecificat")
+        if not result:
+            self.position_uncertain = True
         return result
 
     # ------------------------------------------------------------------ extra
@@ -101,17 +120,26 @@ class TeamArm:
         """Verifică serviciul și setează `mode` după câmpul `sim` din status."""
         status = self.status()
         self.mode = MODE_SIMULATION if status.get("sim") else MODE_HARDWARE
+        sites = status.get("sites")
+        self.sites = {str(k): str(v) for k, v in sites.items()} if isinstance(sites, dict) else {}
         return status
+
+    def _yaw_for(self, location: str, cell: Optional[Tuple[int, int]], yaw_deg: float) -> float:
+        """Inversează semnul doar la caroiaje; la zone (punct) yaw-ul e deja în sistemul robotului."""
+        is_point = cell is None or self.sites.get(location) == "point"
+        return float(yaw_deg) if is_point else to_service_yaw(yaw_deg)
 
     # ------------------------------------------------------------------ ArmInterface
     def home(self) -> None:
         self._call("home")
+        self.position_uncertain = False
 
     def go_pose(self, name: str, speed: str = "fast") -> None:
         v.check_speed(speed)
         if not isinstance(name, str) or not name:
             raise InvalidCommand("numele pozei trebuie să fie un șir nevid")
         self._call("go_pose", {"name": name, "speed": "fast" if speed == "fast" else "slow"})
+        self.position_uncertain = False
 
     def move_joints(self, angles: List[float], time_ms: int) -> None:
         values = v.check_angles(angles)
@@ -137,7 +165,7 @@ class TeamArm:
         body: Dict[str, Any] = {
             "location": v.check_location(location),
             "cell": None if cell is None else [cell[0], cell[1]],
-            "yaw_deg": to_service_yaw(v.check_yaw(yaw_deg)),
+            "yaw_deg": self._yaw_for(location, cell, v.check_yaw(yaw_deg)),
             "level": v.check_level(level),
         }
         checked_uv = v.check_uv(uv, cell)
@@ -151,7 +179,7 @@ class TeamArm:
             "location": v.check_location(location),
             "cell": None if cell is None else [cell[0], cell[1]],
             "level": v.check_level(level),
-            "yaw_deg": to_service_yaw(v.check_yaw(yaw_deg)),
+            "yaw_deg": self._yaw_for(location, cell, v.check_yaw(yaw_deg)),
         }
         return self._outcome(self._call("place", body))
 
