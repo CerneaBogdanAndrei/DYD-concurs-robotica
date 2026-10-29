@@ -23,8 +23,16 @@ r1c1, cu eliberarea de dinainte, de sus: k ~0,23) și îl mută și lateral (-4,
 pe aceeași celulă cu comenzi diferite. Cubul păstrează cam rotirea brațului: pe c0 și c2 baza e rotită ~7 grd.
 Rezultatele se scriu după fiecare punere în `traseu_cub.json`.
 
+Ce se învață (abaterea laterală a ghearei, abaterea de punere, rotirea și k) se păstrează în `invatat.json`: se
+citește la pornire și se scrie după fiecare punere, deci o rulare următoare pornește de unde a rămas.
+Învățarea pe celule (`--repetari 3 --intoarcere 11`): pentru fiecare celulă din listă cubul e dus acolo, apoi e
+ridicat și pus din nou pe aceeași celulă de încă 3 ori (ca proba de pe r1c1: 4 puneri, cu corecțiile de mai sus),
+apoi e adus înapoi pe r1c1 (aici corecțiile se opresc când e bine pus).
+
     ai/.venv/bin/python ai/scripts/calib_live/autocal/traseu_cub.py 00 01 02 12 22 21 20 10 11
+    ai/.venv/bin/python ai/scripts/calib_live/autocal/traseu_cub.py --repetari 3 --intoarcere 11 01 00 02 10 12 20 21 22
 """
+import argparse
 import calendar
 import json
 import math
@@ -60,6 +68,24 @@ YAW_TOL = 1.5  # ... și e rotit cel mult atât (camera: ~0,5 grd între două a
 PRIOR_XY = [((1.5, 1.5), (-1.0, 6.0))]
 MAX_FIXES = 3
 OUT = HERE / "traseu_cub.json"
+MODEL = HERE / "invatat.json"  # ce s-a învățat, pe celule (uv-ul țintei): citit la pornire, scris după fiecare punere
+
+
+def load_model():
+    """-> (laterale, abateri de punere, rotiri, k) din MODEL; liste goale dacă nu există."""
+    m = json.load(open(MODEL)) if MODEL.exists() else {}
+    return ([(tuple(x[:2]), x[2]) for x in m.get("lateral", [])],
+            [(tuple(x[:2]), np.array(x[2:4])) for x in m.get("xy", [])],
+            [(tuple(x[:2]), x[2], x[3]) for x in m.get("yaw", [])],
+            list(m.get("k_pairs", [])))
+
+
+def save_model(lateral, xy, yaw, k_pairs):
+    json.dump({"at": time.strftime("%Y-%m-%d %H:%M:%S"),
+               "lateral": [[float(p[0]), float(p[1]), float(e)] for p, e in lateral],
+               "xy": [[float(p[0]), float(p[1]), float(e[0]), float(e[1])] for p, e in xy],
+               "yaw": [[float(p[0]), float(p[1]), float(c), float(y)] for p, c, y in yaw],
+               "k_pairs": [float(k) for k in k_pairs]}, open(MODEL, "w"), indent=1)
 
 
 def say(msg):
@@ -272,13 +298,24 @@ def main():
     sizes = [f"r{r}c{c} {(b[1] - b[0]) * COL:.1f}x{(b[3] - b[2]) * ROW:.1f}" for r in range(3) for c in range(3)
              for b in [SHEET.box(r, c)]]
     say("Liniile salvate din imaginea de referință (mm): " + ", ".join(sizes))
-    route = [(int(s[0]), int(s[1])) for s in sys.argv[1:]]
+    ap = argparse.ArgumentParser()
+    ap.add_argument("cells", nargs="+", help="celulele, în ordine: rc (ex. 01 00 02)")
+    ap.add_argument("--repetari", type=int, default=0, help="de câte ori se ridică și se pune din nou pe fiecare celulă")
+    ap.add_argument("--intoarcere", default=None, help="după fiecare celulă, cubul e adus înapoi aici (ex. 11)")
+    a = ap.parse_args()
+    legs = []  # (celula, de câte ori se pune din nou pe ea, oricum)
+    for cell in a.cells:
+        legs.append(((int(cell[0]), int(cell[1])), a.repetari))
+        if a.intoarcere:
+            legs.append(((int(a.intoarcere[0]), int(a.intoarcere[1])), 0))
+    out = HERE / ("traseu_invatare.json" if a.repetari else OUT.name)
     loc = load_app_config(ROOT / "ai/config").system.location(LOCATION)
     cube = Cube(loc, status()["cube_mm"])
-    learned, learned_yaw, log = [], [], []
-    learned_xy = [(uv, np.array(e)) for uv, e in PRIOR_XY]
-
-    k_pairs = []  # k măsurat: (rotirea cubului) / (rotirea comandată), între două puneri pe aceeași celulă
+    log = []
+    # k_pairs: k măsurat = (rotirea cubului) / (rotirea comandată), între două puneri pe aceeași celulă
+    learned, learned_xy, learned_yaw, k_pairs = load_model()
+    prior = [(uv, np.array(e)) for uv, e in PRIOR_XY]
+    say(f"Învățat până acum ({MODEL.name}): {len(learned_xy)} puneri, {len(k_pairs)} perechi pentru k")
 
     def k_now():
         return float(np.clip(np.median(k_pairs), *K_RANGE)) if k_pairs else K_WRIST
@@ -288,12 +325,12 @@ def main():
 
     def aim(target):
         """Prima punere pe o celulă: unde și cu ce rotire, din tot ce s-a măsurat până acum (celulele apropiate)."""
-        e = predict_xy(learned_xy, target)
+        e = predict_xy(prior + learned_xy, target)
         y0 = predict_yaw0([(uv, wrap45(yw - k_now() * cm)) for uv, cm, yw in learned_yaw], target)
         return [target[0] - e[0] / COL, target[1] - e[1] / ROW], clamp_yaw(-y0 / k_now()), e
 
     start_pose()
-    for r, c in route:
+    for (r, c), forced in legs:
         # 1. cubul și caroiajul, din poza de start
         found = look(cube)
         if found is None:
@@ -322,7 +359,7 @@ def main():
         say(f"  ținta r{r}c{c}: centrul din liniile salvate uv ({target[0]:.3f}; {target[1]:.3f}), celula "
             f"{(right - left) * COL:.1f} x {(bottom - top) * ROW:.1f} mm; place corectat cu {-e_dst[0]:+.1f} mm pe "
             f"coloane, {-e_dst[1]:+.1f} mm spre robot, rotire {yaw_cmd:+.1f} grd")
-        for fix in range(MAX_FIXES + 1):
+        for fix in range(max(MAX_FIXES, forced) + 1):
             # 4. place și verificarea
             res = post("place", {"location": LOCATION, "uv": place_uv, "yaw_deg": yaw_cmd})
             if res.get("result") is not True:
@@ -355,13 +392,14 @@ def main():
             log.append({"cell": f"r{r}c{c}", "from": f"r{src_cell[0]}c{src_cell[1]}", "fix": fix, "target_uv": target,
                         "sent_uv": place_uv, "yaw_cmd": yaw_cmd, "landed_uv": landed, "yaw": got["yaw_deg"],
                         "off_mm": off, "margins_mm": margins, "lateral_mm": e_true, "k": k_now(), "good": good})
-            json.dump({"at": time.strftime("%Y-%m-%d %H:%M:%S"), "moves": log}, open(OUT, "w"), indent=1, ensure_ascii=False)
+            json.dump({"at": time.strftime("%Y-%m-%d %H:%M:%S"), "moves": log}, open(out, "w"), indent=1, ensure_ascii=False)
+            save_model(learned, learned_xy, learned_yaw, k_pairs)
             post("beep", {"n": 1})
-            if good or fix == MAX_FIXES:
+            if (good and fix >= forced) or fix == max(MAX_FIXES, forced):
                 break
             # 5. corecția: din nou de unde a ajuns, cu abaterile învățate (acum dominate de celula asta)
             state, diag, _ = grab(cube, got, landed, learned)
-            say(f"  corectez: pick din nou ({diag}) -> {GRAB[state]}")
+            say(f"  {'repet (învățare)' if good else 'corectez'}: pick din nou ({diag}) -> {GRAB[state]}")
             if state != "prins":
                 post("beep", {"n": 4})
                 if state == "neclar":
@@ -376,7 +414,7 @@ def main():
             say(f"  pun din nou corectat cu {-ex:+.1f} mm pe coloane, {-ey:+.1f} mm spre robot, încheietura {yaw_cmd:+.1f} grd")
     finals = [m for i, m in enumerate(log) if i + 1 == len(log) or log[i + 1]["fix"] == 0]
     say(f"Gata: {sum(m['good'] for m in finals)}/{len(finals)} mutări bine puse ({len(log) - len(finals)} corecții). "
-        f"Rezultate: {OUT}")
+        f"Rezultate: {out}")
 
 
 if __name__ == "__main__":
