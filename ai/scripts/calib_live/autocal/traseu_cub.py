@@ -170,7 +170,10 @@ def grasp_text(st):
     if not g:
         return "fără citiri"
     d = ["?" if v is None else f"{v - t:+.0f}" for v, t in zip(g["bottom"][:5], g["sent"][:5])]
-    return f"jos, citit - comandat: servo 1..5 [{', '.join(d)}] grd; gheara citită {g['closed'][5]} (comandată {st['grip']})"
+    # cu GRIP_CLOSED 140: goală citește 139, cubul de 29 mm o oprește pe la 133
+    empty = g["closed"][5] is not None and g["closed"][5] >= st["grip"] - 2
+    return (f"jos, citit - comandat: servo 1..5 [{', '.join(d)}] grd; gheara citită {g['closed'][5]} (comandată "
+            f"{st['grip']}{', pare goală' if empty else ', strânge ceva'})")
 
 
 def grab(cube, seen, uv, learned):
