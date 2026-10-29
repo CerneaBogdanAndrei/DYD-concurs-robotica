@@ -136,7 +136,7 @@ După orice modificare, rulați `npm run build`.
 | [src/cli/](src/cli/) | `server`, `calib` |
 | [scripts/compara-armlib.ts](scripts/compara-armlib.ts) | comparare cu `Arm_Lib` |
 | [clients/python/team_arm.py](clients/python/team_arm.py) | clientul pentru creier (`TeamArm`) |
-| [config.ts](src/config.ts) | geometrie, gheară, timpi, limite |
+| [src/config.ts](src/config.ts) | geometrie, gheară, timpi, limite |
 
 ## Diferențe față de referința Python
 
