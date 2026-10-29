@@ -217,4 +217,6 @@ Duratele măsurate devin valori pentru `config/system.yaml` cu `python -m brain 
 - [`docs/step1-analysis.md`](docs/step1-analysis.md): analiza tehnică și arhitectura
 - [`docs/stage0.md`](docs/stage0.md): Etapa 0 (viziune offline)
 - [`docs/stage2.md`](docs/stage2.md): Etapa 2 (planificare, orchestrare, simularea sarcinilor)
+- [`docs/sesiune-2026-10-29-pi.md`](docs/sesiune-2026-10-29-pi.md): jurnalul sesiunii pe Pi (instalare, braț, calibrare, ce urmează)
+- [`docs/calibrare-2026-10-29.md`](docs/calibrare-2026-10-29.md): calibrarea pe braț (unghiuri, teste, potrivirea L1/L4)
 - [`docs/questions-for-kinematics-team.md`](docs/questions-for-kinematics-team.md): constatări și întrebări pentru serviciul de mișcare
