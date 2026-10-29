@@ -10,6 +10,7 @@ peste modelul învățat al caroiajului (care mergea fizic la nivelul 0), iar im
 
     ai/.venv/bin/python ai/scripts/calib_live/autocal/mutare_foaie.py            # doar măsoară
     ai/.venv/bin/python ai/scripts/calib_live/autocal/mutare_foaie.py --aplica   # + scrie calib.json și noua referință
+    ai/.venv/bin/python ai/scripts/calib_live/autocal/mutare_foaie.py --ref-nou  # după o calibrare cu mâna: doar referința
 
 Precizia: ~2 mm cu aceleași unghiuri citite ca la referință; 1 grd diferență = ~10 px = 3-7 mm. Mutări mari (> ~1 celulă) sau rotiri mari
 cer recalibrarea cu mâna (`npm run calib -- celule small`): modelul învățat ar fi extrapolat prea departe.
@@ -76,11 +77,20 @@ def capture(service, preview):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--aplica", action="store_true", help="scrie calib.json și imaginea de acum ca referință")
+    ap.add_argument("--ref-nou", action="store_true", help="salvează imaginea de acum ca referință (după `npm run calib -- celule small`)")
     ap.add_argument("--preview", default="http://127.0.0.1:8080")
     ap.add_argument("--service", default="http://127.0.0.1:8765")
     a = ap.parse_args()
     ref_img, ref_json = HERE / "ref/observe_small.jpg", HERE / "ref/observe_small.json"
     img, obs, now = capture(a.service, a.preview)
+    if a.ref_nou:
+        for src in (ref_img, ref_json):
+            if src.exists():
+                shutil.copy(src, src.with_name(src.stem + ".prev" + src.suffix))
+        cv2.imwrite(str(ref_img), img)
+        json.dump(obs, open(ref_json, "w"), indent=1)
+        print(f"Referință nouă salvată (unghiuri citite {obs['read_joints']}); calib.json neatins.")
+        return
     ref_obs = json.load(open(ref_json))
     if obs["read_joints"] != ref_obs.get("read_joints"):
         print(f"ATENȚIE: unghiuri citite {obs['read_joints']}, la referință {ref_obs.get('read_joints')}: "

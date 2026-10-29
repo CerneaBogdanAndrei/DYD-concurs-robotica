@@ -76,3 +76,13 @@ Foaia `medium` e mutată cu ~3 cm mai departe de robot decât poziția inițial�
   le folosește în loc de estimările 220 / (1,5; 4,5).
 - Cubul roșu pus pe r1c1 are ~40 mm (muchia de jos pe masă ~41 mm; viziunea, cu latura 40: 39,8 x 42,5 mm). Cu
   `cube.size_mm: 29`, pata e prea mare, e tăiată după celule și apare pe r0c1; cu 40: r1c1, încredere 1,0, fără motive.
+
+## Calibrarea cu mâna, refăcută (2026-10-29, ~20:45)
+- Proba pe cub a arătat că mutarea din cameră nu ajungea: cu ținta r1c1, gheara cobora deasupra lui r2c2 (văzut de echipă).
+  Calibrarea de după-amiază nu mai corespundea brațului: ori foaia s-a mutat mai mult decât arată camera (camera se mișcă
+  odată cu brațul), ori s-a schimbat zero-ul servo-urilor (brațul e folosit și de cealaltă echipă și a fost găsit căzut).
+- Refăcută cu `npm run calib -- celule small`, cu un cub de 40 mm, la aceeași înălțime pe cele 4 colțuri:
+  r0c0 [96,27,44,74], r0c2 [84,29,40,74], r2c0 [97,54,30,42], r2c2 [82,54,28,43] -> eroare de potrivire 0,7 mm,
+  z 4..14 mm. În model: pas 31,3 / 31,2 mm, unghi între axe 83,6 grd (fizic 45 / 43 mm, 90 grd): modelul brațului
+  „strânge” distanțele cu ~30%. La nivelul 0 nu contează (interpolare între colțuri); la stivuire poate conta.
+- Referința camerei (`autocal/ref/`) refăcută după calibrare (`mutare_foaie.py --ref-nou`); baza citește 89 în observe_small.

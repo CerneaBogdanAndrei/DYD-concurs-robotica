@@ -2,35 +2,35 @@
  "location": "small",
  "rows": 3,
  "cols": 3,
- "captured_at": "2026-10-29T18:14:13Z",
+ "captured_at": "2026-10-29T18:49:04Z",
  "actionable": true,
  "reasons": [],
- "processing_ms": 690.21,
+ "processing_ms": 682.67,
  "geometry": {
   "method": "lines",
   "ok": true,
   "corners_px": [
    [
-    109.76,
-    28.91
+    127.11,
+    31.05
    ],
    [
-    479.91,
-    28.1
+    498.94,
+    34.05
    ],
    [
-    507.93,
-    396.49
+    527.21,
+    404.7
    ],
    [
-    58.89,
-    391.59
+    76.08,
+    397.43
    ]
   ],
   "structure_score": 1.0,
   "metrics": {
-   "line_residual_cells": 0.0269,
-   "condition_number": 1.227,
+   "line_residual_cells": 0.0271,
+   "condition_number": 1.225,
    "structure_score": 1.0,
    "min_line_support": 1.0,
    "lines_measured": 8.0
@@ -40,9 +40,9 @@
   "frames_total": 5,
   "frames_valid": 5,
   "flags": [],
-  "mean_brightness": 181.53,
-  "contrast": 34.98,
-  "sharpness": 599.56
+  "mean_brightness": 181.43,
+  "contrast": 35.19,
+  "sharpness": 587.0
  },
  "cells": [
   {
@@ -218,7 +218,7 @@
   }
  ],
  "read_joints": [
-  90,
+  89,
   90,
   29,
   3,
