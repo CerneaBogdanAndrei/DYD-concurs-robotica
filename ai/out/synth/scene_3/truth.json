@@ -1,0 +1,108 @@
+{
+  "seed": 3,
+  "kind": "positive",
+  "difficulty": "nominal",
+  "use_aruco": false,
+  "rows": 3,
+  "cols": 3,
+  "cubes": [
+    {
+      "row": 0,
+      "col": 1,
+      "color": "blue",
+      "yaw_deg": 39.966,
+      "top_face": "full",
+      "center_mm": [
+        60.92116179606106,
+        17.986320553260143
+      ],
+      "note": ""
+    },
+    {
+      "row": 0,
+      "col": 2,
+      "color": "green",
+      "yaw_deg": -19.256,
+      "top_face": "icon",
+      "center_mm": [
+        100.84405217156029,
+        17.572305131772957
+      ],
+      "note": ""
+    },
+    {
+      "row": 1,
+      "col": 0,
+      "color": "green",
+      "yaw_deg": -14.827,
+      "top_face": "full",
+      "center_mm": [
+        21.58571828133642,
+        62.248702801000356
+      ],
+      "note": ""
+    },
+    {
+      "row": 1,
+      "col": 1,
+      "color": "red",
+      "yaw_deg": 40.235,
+      "top_face": "full",
+      "center_mm": [
+        60.47143663797026,
+        61.00941898517492
+      ],
+      "note": ""
+    },
+    {
+      "row": 2,
+      "col": 0,
+      "color": "green",
+      "yaw_deg": -39.48,
+      "top_face": "full",
+      "center_mm": [
+        21.43504876299251,
+        102.32520281381292
+      ],
+      "note": ""
+    },
+    {
+      "row": 2,
+      "col": 2,
+      "color": "red",
+      "yaw_deg": 30.157,
+      "top_face": "icon",
+      "center_mm": [
+        101.87756956011901,
+        101.39192452065937
+      ],
+      "note": ""
+    }
+  ],
+  "grid_corners_px": [
+    [
+      148.733,
+      88.978
+    ],
+    [
+      455.556,
+      77.614
+    ],
+    [
+      468.584,
+      380.604
+    ],
+    [
+      166.682,
+      395.735
+    ]
+  ],
+  "expect_actionable": true,
+  "camera": {
+    "height_mm": 332.27,
+    "nadir_x_mm": 72.47,
+    "nadir_y_mm": 51.49,
+    "noise_sigma": 2.114,
+    "blur_sigma": 0.543
+  }
+}

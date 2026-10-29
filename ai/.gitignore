@@ -1,9 +1,10 @@
+# Doar ce nu se poate sau nu are sens să fie urcat. Rezultatele din out/ și data/ SUNT în repo.
+# .venv: binare Windows (cv2.pyd are 113 MB, peste limita GitHub de 100 MB/fișier); pe Pi se creează din nou.
 .venv/
+# cache-uri regenerate automat
 __pycache__/
 *.py[cod]
 *.egg-info/
 .pytest_cache/
 build/
 dist/
-out/
-data/
