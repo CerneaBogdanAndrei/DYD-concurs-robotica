@@ -1,0 +1,68 @@
+{
+ "at": "2026-10-30 04:55:44",
+ "sent": [
+  90,
+  105,
+  15,
+  0,
+  90
+ ],
+ "read": [
+  90,
+  105,
+  15,
+  1,
+  89,
+  139
+ ],
+ "observation": {
+  "location": "small",
+  "rows": 3,
+  "cols": 3,
+  "captured_at": "2026-10-30T02:55:44Z",
+  "actionable": false,
+  "reasons": [
+   "grid_line_unsupported"
+  ],
+  "processing_ms": 603.13,
+  "geometry": {
+   "method": "lines",
+   "ok": false,
+   "corners_px": [
+    [
+     109.13,
+     17.44
+    ],
+    [
+     496.61,
+     27.48
+    ],
+    [
+     526.39,
+     435.03
+    ],
+    [
+     41.4,
+     415.55
+    ]
+   ],
+   "structure_score": 0.7208,
+   "metrics": {
+    "line_residual_cells": 0.0284,
+    "condition_number": 1.259,
+    "structure_score": 0.7208,
+    "min_line_support": 0.0,
+    "lines_measured": 8.0
+   }
+  },
+  "quality": {
+   "frames_total": 5,
+   "frames_valid": 5,
+   "flags": [],
+   "mean_brightness": 164.08,
+   "contrast": 51.6,
+   "sharpness": 561.84
+  },
+  "cells": []
+ }
+}

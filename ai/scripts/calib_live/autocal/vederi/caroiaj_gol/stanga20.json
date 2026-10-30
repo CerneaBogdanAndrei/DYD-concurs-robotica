@@ -1,0 +1,45 @@
+{
+ "at": "2026-10-30 04:55:28",
+ "sent": [
+  110,
+  90,
+  30.0,
+  2,
+  90
+ ],
+ "read": [
+  109,
+  90,
+  30,
+  3,
+  89,
+  139
+ ],
+ "observation": {
+  "location": "small",
+  "rows": 3,
+  "cols": 3,
+  "captured_at": "2026-10-30T02:55:27Z",
+  "actionable": false,
+  "reasons": [
+   "grid_lines_not_found"
+  ],
+  "processing_ms": 331.87,
+  "geometry": {
+   "method": "lines",
+   "ok": false,
+   "corners_px": [],
+   "structure_score": null,
+   "metrics": {}
+  },
+  "quality": {
+   "frames_total": 5,
+   "frames_valid": 5,
+   "flags": [],
+   "mean_brightness": 173.26,
+   "contrast": 53.57,
+   "sharpness": 387.85
+  },
+  "cells": []
+ }
+}
