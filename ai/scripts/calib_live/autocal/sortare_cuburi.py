@@ -56,6 +56,9 @@ PREVIEW_DIR = ROOT / "ai/out/preview"
 COLORS = {"red": "roșu", "yellow": "galben", "green": "verde", "blue": "albastru"}
 CENTER_UV = (1.5, 1.5)  # punctul de referință: centrul lui r1c1, mijlocul caroiajului
 FAINT = "faint_color_object"  # o urmă slabă pe hârtie (2026-10-30: pe r1c1, r1c2, r2c1), nu un cub
+# puțină culoare pe celulă, fără un cub: 2026-10-30, verdele lăsat la ~5 mm în stânga lui r0 dădea pe r0c0 o bucată
+# din fața lui (tăiată de marginea imaginii), cu centrul estimat în celulă
+AMBIGUOUS = "ambiguous_colored_area"
 
 VIEWS = json.load(open(HERE / "vederi/caroiaj_gol/calib_vederi.json"))["views"]
 OBSERVE = VIEWS["centru"]["sent"]  # = observe_small
@@ -87,14 +90,21 @@ SHEET = None  # Sheet(), încărcat în main
 # ------------------------------------------------------------------ pasul 1
 
 
-def cell_colors(obs):
+def weak(c, lenient=False):
+    """Celula are doar o urmă de culoare, nu un cub: o urmă slabă pe hârtie sau (`lenient`) puțină culoare ambiguă."""
+    reasons = c.get("reasons", [])
+    return c["occupancy"] != "occupied" and (FAINT in reasons or (lenient and AMBIGUOUS in reasons))
+
+
+def cell_colors(obs, lenient=False):
     """{'r0c0': 'yellow', ...} pentru celulele ocupate; None dacă analiza nu e sigură (caroiajul negăsit, o celulă
-    nesigură sau un cub cu o culoare necunoscută). O celulă cu doar o urmă slabă de culoare e goală."""
+    nesigură sau un cub cu o culoare necunoscută). O celulă cu doar o urmă slabă de culoare e goală; cu `lenient`, și
+    una cu puțină culoare ambiguă (un cub de lângă caroiaj)."""
     if not obs["geometry"].get("ok"):
         return None
     out = {}
     for c in obs["cells"]:
-        if c["occupancy"] == "empty" or (c["occupancy"] != "occupied" and FAINT in c.get("reasons", [])):
+        if c["occupancy"] == "empty" or weak(c, lenient):
             continue
         if c["occupancy"] != "occupied" or c.get("color") not in COLORS:
             return None
@@ -107,11 +117,11 @@ def table(cells):
                      for r in range(3))
 
 
-def grid_colors(tries=5):
+def grid_colors(tries=5, lenient=False):
     """Celulele ocupate și culorile lor, la fel în două analize la rând din poza de start. -> (celule, analiza)"""
     for _ in range(tries):
         (o1, _), (o2, _) = analyses(2)
-        a, b = cell_colors(o1), cell_colors(o2)
+        a, b = cell_colors(o1, lenient), cell_colors(o2, lenient)
         if a is not None and a == b:
             return b, o2
     return None, None
@@ -581,9 +591,12 @@ def check_grid(state, cube):
     """Caroiajul din poza de start față de stare: un cub care nu e printre cele puse (lăsat de echipă) intră în stare
     cu culoarea lui și rămâne acolo; o celulă pusă care nu se mai vede ocupată e doar semnalată (nu se mai pune nimic
     peste ea)."""
-    cells, obs = grid_colors()
+    cells, obs = grid_colors(lenient=True)
     if cells is None:
         sys.exit("Din poza de start două analize la rând nu dau aceleași celule ocupate: verificați caroiajul.")
+    vague = [f"r{c['row']}c{c['col']}" for c in obs["cells"] if weak(c, True) and AMBIGUOUS in c.get("reasons", [])]
+    if vague:
+        say(f"  {', '.join(vague)}: puțină culoare, fără un cub (un cub de lângă caroiaj?): luate ca goale")
     for c in obs["cells"]:
         key = f"r{c['row']}c{c['col']}"
         if key in cells and key not in state["filled"]:
