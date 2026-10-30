@@ -175,35 +175,45 @@ def match_lines(und, cam, tol):
     return {key: det for key, (_, det) in found.items()}
 
 
-def refine(raw, prior):
-    """Camera reajustată pe intersecțiile caroiajului care se văd (cuburile pot acoperi o parte din ele), în doi pași:
-    liniile potrivite cu cele proiectate cu camera de la calibrare, apoi, mai strâns, cu cea reajustată. Cu doar 2-5
-    intersecții, camera de la calibrare doar se mută pe foaie cu abaterea lor medie (baza nu revine exact: ~1 grd
-    mută foaia ~5 mm, aproape o translație). -> (camera, text)."""
-    und = cv2.undistort(raw, K, DIST)
+def crossings(und, cam, tol):
+    """Intersecțiile caroiajului văzute (mm pe foaie, px fără distorsiune), din liniile potrivite cu `cam`."""
+    found = match_lines(und, cam, tol)
+    obj, img = [], []
+    for (ax, i), lc in found.items():
+        for (ay, j), lr in found.items():
+            if ax == 0 and ay == 1:
+                x = visible_crossing(lc, lr)
+                if x is not None:
+                    obj.append((i * COL, j * ROW))
+                    img.append(x)
+    return obj, img
+
+
+def refine(raws, prior):
+    """Camera reajustată pe intersecțiile caroiajului care se văd în cadrele `raws` (aceeași poză; cuburile pot acoperi
+    o parte din ele), în doi pași: liniile potrivite cu cele proiectate cu camera de la calibrare, apoi, mai strâns, cu
+    cea reajustată. Cu doar 2-5 intersecții, camera de la calibrare doar se mută pe foaie cu abaterea lor medie (baza nu
+    revine exact: ~1 grd mută foaia ~5 mm, aproape o translație). -> (camera, text)."""
+    unds = [cv2.undistort(raw, K, DIST) for raw in raws]
     cam, rms, n = prior, None, 0
     for tol in LINE_PX:
-        found = match_lines(und, cam, tol)
         obj, img = [], []
-        for (ax, i), lc in found.items():
-            for (ay, j), lr in found.items():
-                if ax == 0 and ay == 1:
-                    x = visible_crossing(lc, lr)
-                    if x is not None:
-                        obj.append((i * COL, j * ROW))
-                        img.append(x)
-        if len(obj) < 6:
-            if rms is None and len(obj) >= 2:
+        for und in unds:
+            o, i = crossings(und, cam, tol)
+            obj += o
+            img += i
+        seen = len(set(obj))
+        if seen < 6:
+            if rms is None and seen >= 2:
                 d = (np.array(obj) - cam.to_sheet(img, 0.0)).mean(0)
                 spread = float(np.abs(np.array(obj) - cam.to_sheet(img, 0.0) - d).max())
                 if np.linalg.norm(d) <= REFINE_MAX_MM and spread <= 2.0:
                     moved = Camera(cam.rvec, -cam.R @ (cam.center + np.array([d[0], d[1], 0.0])))
-                    return moved, (f"camera de la calibrare mutată pe foaie cu {np.linalg.norm(d):.1f} mm "
-                                   f"({len(obj)} intersecții)")
-            n = n or len(obj)
+                    return moved, f"camera de la calibrare mutată pe foaie cu {np.linalg.norm(d):.1f} mm ({seen} intersecții)"
+            n = n or seen
             break
         cam, rms, _ = Camera.fit(obj, img, guess=cam)
-        n = len(obj)
+        n = seen
     if rms is None:
         return prior, f"camera de la calibrare ({n} intersecții văzute)"
     shift = float(np.linalg.norm(cam.to_sheet([[320, 240]], -CUBE_MM) - prior.to_sheet([[320, 240]], -CUBE_MM)))
@@ -213,36 +223,48 @@ def refine(raw, prior):
 
 
 def is_face(c):
-    return FACE_MM[0] <= min(c["sides_mm"]) and max(c["sides_mm"]) <= FACE_MM[1] and c["fill"] >= 0.8
+    """O față de cub: întreagă, cu laturile și umplerea unui pătrat de 29 mm, sau completată din laturile văzute."""
+    return c["completed"] or (FACE_MM[0] <= min(c["sides_mm"]) and max(c["sides_mm"]) <= FACE_MM[1]
+                              and c["fill"] >= 0.8)
 
 
-def cubes_in(raw, prior):
-    """Fețele colorate din afara caroiajului într-un cadru. -> (cuburi: fețe întregi sau tăiate de cadru, celelalte
-    pete colorate, text despre cameră)"""
-    cam, info = refine(raw, prior)
+def cubes_in(raw, cam):
+    """Fețele colorate din afara caroiajului într-un cadru. -> (cuburi: fețe întregi, completate sau tăiate de cadru,
+    celelalte pete colorate)"""
     cubes, blobs = [], []
     for c in cube_tops(raw, cam):
         if outside_gap_mm(c["center_mm"]) > 0:
             (cubes if c["clipped"] or is_face(c) else blobs).append(c)
-    return cubes, blobs, info
+    return cubes, blobs
+
+
+def same_cubes(a, b, view):
+    """Cuburile din două cadre, potrivite (aceeași culoare, centrele la cel mult SAME_CUBE_MM), cu centrul și rotirea
+    mediate; None dacă nu se potrivesc toate."""
+    pairs = []
+    for ca in a:
+        loose = lambda c: c["clipped"] or c["completed"]
+        near = [cb for cb in b if cb["color"] == ca["color"] and math.dist(ca["center_mm"], cb["center_mm"])
+                <= SAME_CUBE_MM[loose(ca) or loose(cb)]]
+        if len(near) == 1:
+            cb = near[0]
+            pairs.append(dict(cb, center_mm=tuple((np.array(ca["center_mm"]) + cb["center_mm"]) / 2.0),
+                              yaw_deg=cb["yaw_deg"] + wrap45(ca["yaw_deg"] - cb["yaw_deg"]) / 2.0,
+                              clipped=ca["clipped"] or cb["clipped"], completed=ca["completed"] or cb["completed"],
+                              view=view))
+    return pairs if len(pairs) == len(a) == len(b) else None
 
 
 def view_cubes(view):
-    """Cuburile din afara caroiajului văzute din `view`, la fel în două analize (aceeași culoare, centrele la cel mult
-    SAME_CUBE_MM). -> (cuburile, cu centrul și rotirea mediate, celelalte pete, text despre cameră), sau None."""
+    """Cuburile din afara caroiajului văzute din `view`, la fel în două cadre (camera reajustată pe amândouă).
+    -> (cuburile, celelalte pete, text despre cameră), sau None."""
     prior = Camera.from_dict(VIEWS[view]["camera"])
     for _ in range(3):
-        (a, _, _), (b, blobs, info) = [cubes_in(raw, prior) for raw in raw_frames(2)]
-        pairs = []
-        for ca in a:
-            near = [cb for cb in b if cb["color"] == ca["color"] and math.dist(ca["center_mm"], cb["center_mm"])
-                    <= SAME_CUBE_MM[ca["clipped"] or cb["clipped"]]]
-            if len(near) == 1:
-                cb = near[0]
-                pairs.append(dict(cb, center_mm=tuple((np.array(ca["center_mm"]) + cb["center_mm"]) / 2.0),
-                                  yaw_deg=cb["yaw_deg"] + wrap45(ca["yaw_deg"] - cb["yaw_deg"]) / 2.0,
-                                  clipped=ca["clipped"] or cb["clipped"], view=view))
-        if len(pairs) == len(a) == len(b):
+        raws = raw_frames(2)
+        cam, info = refine(raws, prior)
+        (a, _), (b, blobs) = [cubes_in(raw, cam) for raw in raws]
+        pairs = same_cubes(a, b, view)
+        if pairs is not None:
             return pairs, blobs, info
     return None
 
@@ -268,9 +290,11 @@ def where(c):
 
 
 def search(views, at_start=False):
-    """Cuburile din zonă, din prima vedere; din următoarea doar dacă prima nu vede niciun cub sau unul iese din cadru.
-    Un cub văzut în ambele (aceeași culoare, la cel mult MERGE_MM) se ia din vederea în care e întreg.
-    -> (cuburile, celelalte pete colorate, ultima vedere)"""
+    """Cuburile din zonă, privite din toate vederile ei. Un cub văzut în mai multe (aceeași culoare, la cel mult
+    MERGE_MM) se ia din cea în care e întreg și cât mai aproape de centrul imaginii, unde obiectivul e mai bine
+    modelat (2026-10-30: un cub din colțul imaginii din stanga11 ieșea cu ~3 mm mai încolo decât din centrul lui
+    stanga20). -> (cuburile, celelalte pete colorate, ultima vedere)"""
+    rank = lambda c: (c["clipped"], c["completed"], c["off_center_px"])
     cubes, blobs, view = [], [], None
     for i, view in enumerate(views):
         if i == 0:
@@ -288,16 +312,16 @@ def search(views, at_start=False):
                     and math.dist(o["center_mm"], c["center_mm"]) <= MERGE_MM]
             if not same:
                 cubes.append(c)
-            elif cubes[same[0]]["clipped"] and not c["clipped"]:
+            elif rank(c) < rank(cubes[same[0]]):
                 cubes[same[0]] = c
         blobs += other
         say(f"  {view}: {info}; " + (", ".join(
-            f"{where(c)}{' (TĂIAT de cadru)' if c['clipped'] else ''}, {outside_gap_mm(c['center_mm']):.0f} mm de "
-            f"caroiaj, rotit {c['yaw_deg']:+.0f} grd" for c in new) or "niciun cub")
+            f"{where(c)}{' (TĂIAT de cadru)' if c['clipped'] else ' (completat)' if c['completed'] else ''}, "
+            f"{outside_gap_mm(c['center_mm']):.0f} mm de caroiaj, rotit {c['yaw_deg']:+.0f} grd" for c in new)
+            or "niciun cub")
             + "".join(f"; pată {COLORS.get(b['color'], b['color'])} {b['sides_mm'][0]:.0f}x{b['sides_mm'][1]:.0f} mm "
                       f"la ({b['center_mm'][0]:.0f}; {b['center_mm'][1]:.0f}), nu pare un cub" for b in other))
-        if cubes and not any(c["clipped"] for c in cubes):
-            break
+    say("  " + (", ".join(f"{where(c)} din {c['view']}" for c in cubes) or "niciun cub în zonă"))
     return cubes, blobs, view
 
 

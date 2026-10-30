@@ -256,20 +256,63 @@ def cube_tops(raw, cam, min_area=1500, open_mm=8.0):
             cv2.drawContours(region, [fc], -1, 255, -1)
             border = cv2.dilate(region, k(2.0)) > 0
             clipped = bool((border & ~inside).any())
+            full = _complete(fc.reshape(-1, 2), cv2.erode(inside.astype(np.uint8), k(3.0)) > 0) if clipped else None
+            if full is not None:
+                (cx, cy), a = full
             # culoarea: votul viziunii pe pixelii feței (nuanțele originale, fără golurile umplute)
             sel = cv2.remap(hsv, px[..., 0], px[..., 1], cv2.INTER_NEAREST)[region > 0]
             vote = HUE.vote(sel[(sel[:, 1] >= HUE.config.saturation_min) & (sel[:, 2] >= FACE_VAL_MIN)], 50)
             to_mm = lambda v: v / FACE_PX_MM
             face_px = distort_points(cam.project(np.c_[x0 + to_mm(fc[:, 0, 0]), y0 + to_mm(fc[:, 0, 1]),
                                                        np.full(len(fc), -CUBE_MM)]))
+            center = (float(x0 + to_mm(cx)), float(y0 + to_mm(cy)))
+            center_px = distort_points(cam.project([[center[0], center[1], -CUBE_MM]]))[0]
             out.append({"color": vote.color.value if vote.color.value != "unknown" else HUE.colors[idx].value,
                         "vote": round(vote.dominance, 2),
-                        "center_mm": (float(x0 + to_mm(cx)), float(y0 + to_mm(cy))),
+                        "center_mm": center,
                         "sides_mm": (float(to_mm(sw)), float(to_mm(sh))),
                         "yaw_deg": float((a + 45.0) % 90.0 - 45.0),
-                        "fill": float(area / max(sw * sh, 1e-6)), "clipped": clipped,
+                        "fill": float(area / max(sw * sh, 1e-6)), "clipped": clipped and full is None,
+                        "completed": full is not None,
+                        "off_center_px": float(np.hypot(*(center_px - [w / 2.0, h / 2.0]))),
                         "contour_px": face_px.tolist()})
     return out
+
+
+def _complete(pts, away):
+    """Fața unui cub tăiată de marginea imaginii, completată la pătratul ei (CUBE_MM) din laturile adevărate: punctele
+    conturului departe de margine (`away`, în planul fețelor). Pe fiecare axă a dreptunghiului lor: dacă se văd ambele
+    laturi, mijlocul; dacă una e tăiată, cea văzută plus/minus jumătate de cub. -> ((cx, cy), unghi) în pixelii
+    planului, sau None dacă se vede prea puțin (sub o treime de cub pe o axă)."""
+    side = CUBE_MM * FACE_PX_MM
+    hit = away[pts[:, 1], pts[:, 0]]
+    real, cut = pts[hit].astype(np.float64), pts[~hit].astype(np.float64)
+    if len(real) < 20 or len(cut) == 0:
+        return None
+    # orientarea: direcția laturilor adevărate (tangentele conturului, modulo 90 grd); dreptunghiul minim al lor s-ar
+    # înclina când tăietura e oblică și laturile rămân inegale (2026-10-30: -11 grd în loc de ~0)
+    step = 4
+    t = np.roll(pts, -step, 0).astype(np.float64) - np.roll(pts, step, 0)
+    both = hit & np.roll(hit, -step) & np.roll(hit, step)
+    phi = 4.0 * np.arctan2(t[both, 1], t[both, 0])
+    if both.sum() < 10:
+        return None
+    a = math.degrees(math.atan2(np.sin(phi).sum(), np.cos(phi).sum()) / 4.0)
+    cx, cy = real.mean(0)
+    axes = np.array([[math.cos(math.radians(a)), math.sin(math.radians(a))],
+                     [-math.sin(math.radians(a)), math.cos(math.radians(a))]])
+    q, qc = (real - (cx, cy)) @ axes.T, (cut - (cx, cy)) @ axes.T
+    mid = []
+    for ax in (0, 1):
+        lo, hi = q[:, ax].min(), q[:, ax].max()
+        if hi - lo >= 0.9 * side:
+            mid.append((lo + hi) / 2.0)
+        elif hi - lo < side / 3.0:
+            return None
+        else:  # latura tăiată e cea de lângă punctele de pe margine
+            mid.append(hi - side / 2.0 if qc[:, ax].mean() < (lo + hi) / 2.0 else lo + side / 2.0)
+    c = np.array([cx, cy]) + np.array(mid) @ axes
+    return (float(c[0]), float(c[1])), a
 
 
 def outside_gap_mm(center):
