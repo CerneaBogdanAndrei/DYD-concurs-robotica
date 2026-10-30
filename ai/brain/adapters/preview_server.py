@@ -13,6 +13,9 @@ Cu un `api` (masa de lucru din `brain/cli/workbench.py`) există și:
   octeții imaginii, maximum `MAX_UPLOAD_BYTES`), `GET /target/photo.jpg`, `GET /target/annotated.jpg`;
 - `POST /plan` (planul de la starea curentă la țintă; nu mișcă brațul);
 - `GET /execute`, `POST /execute`, `POST /execute/token`, `POST /execute/stop` (execuția, doar dacă e permisă).
+Cu un `sorter` (sortarea, `brain/cli/sorting.py`) există și:
+- `GET /sortare` (starea, jurnalul, harta din pasul 1), `GET /sortare/harta.jpg` (poza salvată la pasul 1);
+- `POST /sortare/poza` (pasul 1), `POST /sortare/start` (pașii 2-4), `POST /sortare/stop`.
 Erorile au forma `{"error": "mesaj"}`.
 """
 
@@ -110,7 +113,7 @@ class PreviewHub:
         return self._closed
 
 
-def _handler(hub: PreviewHub, api: Any, page: bytes) -> type:
+def _handler(hub: PreviewHub, api: Any, page: bytes, sorter: Any = None) -> type:
     class Handler(BaseHTTPRequestHandler):
         server_version = "BrainPreview/2"
 
@@ -168,12 +171,20 @@ def _handler(hub: PreviewHub, api: Any, page: bytes) -> type:
                 self._image(api.target_image(path.rsplit("/", 1)[1].split(".")[0]), "nicio poză încărcată")
             elif api is not None and path == "/execute":
                 self._json(200, api.execution_status())
+            elif sorter is not None and path == "/sortare":
+                self._json(200, sorter.status())
+            elif sorter is not None and path == "/sortare/harta.jpg":
+                self._image(sorter.map_image(), "nicio poză salvată încă (pasul 1)")
             else:
                 self._send(404, "text/plain; charset=utf-8", "rută necunoscută".encode("utf-8"))
 
         def do_POST(self) -> None:  # noqa: N802
             path = self.path.split("?", 1)[0]
             try:
+                if sorter is not None and path.startswith("/sortare/"):
+                    self._read(MAX_JSON_BYTES, required=False)
+                    self._json(200, sorter.post(path[len("/sortare/"):]))
+                    return
                 if api is None:
                     raise ApiError(404, "rută necunoscută")
                 self._post(path)
@@ -263,15 +274,17 @@ def _handler(hub: PreviewHub, api: Any, page: bytes) -> type:
 
 
 class PreviewServer:
-    """Serverul HTTP pe un fir separat. `port=0` alege un port liber (teste). `api` = masa de lucru (opțională)."""
+    """Serverul HTTP pe un fir separat. `port=0` alege un port liber (teste). `api` = masa de lucru și `sorter` =
+    sortarea (opționale)."""
 
-    def __init__(self, hub: PreviewHub, host: str, port: int, api: Any = None) -> None:
+    def __init__(self, hub: PreviewHub, host: str, port: int, api: Any = None, sorter: Any = None) -> None:
         from brain.adapters.preview_page import render_page
 
         self.hub = hub
         page = render_page(hub.location, workbench=api is not None,
-                           execute=bool(api is not None and getattr(api, "execute_enabled", False)))
-        self._server = ThreadingHTTPServer((host, port), _handler(hub, api, page.encode("utf-8")))
+                           execute=bool(api is not None and getattr(api, "execute_enabled", False)),
+                           sorting=sorter is not None)
+        self._server = ThreadingHTTPServer((host, port), _handler(hub, api, page.encode("utf-8"), sorter))
         self._server.daemon_threads = True
         self._thread = threading.Thread(target=self._server.serve_forever, name="preview-http", daemon=True)
 

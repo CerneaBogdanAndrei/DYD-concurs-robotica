@@ -316,8 +316,13 @@ def _cmd_camera_preview(config: AppConfig, args: argparse.Namespace) -> int:
     )
     workbench = Workbench(config, hub, session, Path(settings.save_dir),
                           expected_mode=MODE_SIMULATION if args.service_sim else MODE_HARDWARE)
+    from brain.cli.sorting import SortingRunner, default_script
+
+    script = default_script()
+    sorter = SortingRunner(script, Path(settings.save_dir) / "sortare.log") if script.exists() else None
     try:
-        server = PreviewServer(hub, host, settings.port if args.port is None else args.port, api=workbench).start()
+        server = PreviewServer(hub, host, settings.port if args.port is None else args.port, api=workbench,
+                               sorter=sorter).start()
     except OSError as exc:
         raise PerceptionInputError("serverul de previzualizare nu poate porni pe {}:{}: {}".format(
             host, settings.port if args.port is None else args.port, exc)) from None
@@ -328,6 +333,8 @@ def _cmd_camera_preview(config: AppConfig, args: argparse.Namespace) -> int:
                                              "  ".join("http://{}:{}/".format(h, server.port) for h in hosts)))
     print("  imagini: http://<ip>:{0}/snapshot.jpg  http://<ip>:{0}/annotated.jpg ; pe disc: {1}".format(
         server.port, settings.save_dir))
+    print("  sortarea din pagină („Fă poza”, „Start”): " + ("brațul REAL se mișcă din butoane" if sorter is not None
+                                                             else "lipsește scriptul {}".format(script)))
     if workbench.execute_enabled:
         print("  EXECUȚIA DIN PAGINĂ E PERMISĂ (preview.allow_execute: true{}). Codul de introdus în pagină: {}".format(
             ", serviciul în simulare" if args.service_sim else ", doar brațul real", workbench.token))

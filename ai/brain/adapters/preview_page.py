@@ -2,8 +2,9 @@
 
 Panouri: „Live” (fluxul camerei), „Ce vede brain-ul” (analiza adnotată + caroiajul celulelor), „Stare”
 (șablonul, serviciul de mișcare, gheara), „Ținta (S1)” (poză sau editare manuală), „Plan” și, doar cu
-`preview.allow_execute: true`, „Execuție”. Datele vin din `/status.json` (la ~1 s) și din rutele JSON ale mesei
-de lucru; nicio reîncărcare a paginii.
+`preview.allow_execute: true`, „Execuție”; cu scriptul de sortare prezent, „Sortare” (poza salvată la pasul 1, harta
+culorilor, butoanele „Fă poza” / „Start” / „Oprește” și jurnalul rulării, din `/sortare` la ~1,5 s). Datele vin din
+`/status.json` (la ~1 s) și din rutele JSON ale mesei de lucru; nicio reîncărcare a paginii.
 """
 
 from __future__ import annotations
@@ -93,6 +94,10 @@ ol.moves li::before { content: counter(m) "."; color: var(--muted); text-align: 
 .legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12.5px; color: var(--muted); margin-top: 8px; }
 .photo { max-width: 100%; border-radius: 8px; margin-top: 6px; display: none; }
 .hidden { display: none !important; }
+pre.log { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin: 10px 0 0;
+  font: 12.5px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; max-height: 260px; overflow: auto;
+  white-space: pre-wrap; overflow-wrap: anywhere; }
+.cell.placed::after { content: "✓"; position: absolute; bottom: 3px; right: 7px; font-weight: 800; }
 </style></head><body>
 <header>
   <h1>Brain · masa de lucru</h1>
@@ -178,6 +183,31 @@ _EXECUTE = """<section class="card wide" id="x-card">
   </div>
   <div id="x-msg"></div>
   <div id="x-out"></div>
+</section>
+"""
+
+_SORTING = """<section class="card wide" id="s-card">
+  <h2>Sortare <span class="sub">brațul REAL se mișcă din butoane</span></h2>
+  <div class="split">
+    <div>
+      <img class="view" id="s-img" alt="poza salvată la pasul 1 (apare după „Fă poza”)">
+      <p class="small muted" id="s-img-at">Nicio poză salvată încă: puneți cuburile pe caroiaj și apăsați „Fă poza”.</p>
+    </div>
+    <div>
+      <div class="toolbar">
+        <button id="s-photo" class="primary" type="button">Fă poza</button>
+        <button id="s-start" class="danger" type="button" disabled>Start</button>
+        <button id="s-stop" type="button" disabled>Oprește</button>
+      </div>
+      <p class="small muted">1. Cuburile pe caroiaj, apoi „Fă poza”: brațul merge în poza de start și memorează culoarea
+      fiecărei celule. 2. Scoateți cuburile în stânga, în dreapta sau sub caroiaj, apoi „Start”: brațul le ia pe rând
+      (stânga, dreapta, jos) și pune fiecare cub o singură dată pe celula culorii lui, apoi revine în centru.</p>
+      <div id="s-msg"></div>
+      <div class="board" id="s-board"></div>
+      <div class="legend"><span>culoarea = harta din poză</span><span>✓ = pus de braț</span></div>
+    </div>
+  </div>
+  <pre class="log" id="s-log"></pre>
 </section>
 """
 
@@ -514,6 +544,53 @@ async function stop() {
   catch (e) { msg("x-msg", "bad", e.message); }
 }
 
+/* ---------------------------------------------------------------- sortarea */
+let sortMapAt = null;
+async function sortAction(action) {
+  const ask = {
+    poza: "Brațul merge în poza de start și face harta culorilor (cuburile trebuie să fie pe caroiaj). Pornesc?",
+    start: "Brațul pornește: ia cuburile din stânga, din dreapta și de sub caroiaj și le pune pe culoarea lor. Pornesc?",
+  };
+  if (ask[action] && !confirm(ask[action])) return;
+  try { renderSorting(await api("POST", "sortare/" + action)); } catch (e) { msg("s-msg", "bad", e.message); }
+}
+function renderSorting(s) {
+  const run = s.run;
+  $("s-photo").disabled = s.running;
+  $("s-start").disabled = s.running || !s.map;
+  $("s-stop").disabled = !s.running || (run && run.stopping);
+  if (!run) msg("s-msg", "", "");
+  else if (s.running) msg("s-msg", "warn", (run.stopping ? "se oprește după comanda curentă: " : "rulează: ") + run.text);
+  else if (run.exit_code === 0) msg("s-msg", "ok", "gata: " + run.text);
+  else {
+    const last = s.log.length ? s.log[s.log.length - 1] : "";
+    msg("s-msg", "bad", "s-a oprit (" + run.text + ")" + (last ? ": " + last : ""));
+  }
+  if (s.map && s.map.image && s.map.at !== sortMapAt) {
+    sortMapAt = s.map.at;
+    $("s-img").src = "sortare/harta.jpg?t=" + encodeURIComponent(s.map.at);
+    $("s-img-at").textContent = "Poza de la pasul 1, salvată la " + s.map.at + ".";
+  }
+  const board = $("s-board"); board.innerHTML = "";
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      const key = "r" + r + "c" + c, color = s.map ? s.map.cells[key] : null, put = s.filled[key];
+      const cell = el("div", "cell " + (color ? "c-" + color : "c-empty") + (put ? " placed" : ""));
+      cell.appendChild(el("span", "coord", key));
+      cell.appendChild(el("span", "name", color ? RO[color] : "gol"));
+      if (color) cell.appendChild(el("span", null, put ? (put.good === false ? "pus (nu e BINE)" : "pus") : "de pus"));
+      board.appendChild(cell);
+    }
+  }
+  const log = $("s-log"), atEnd = log.scrollTop + log.clientHeight >= log.scrollHeight - 4;
+  log.textContent = s.log.length ? s.log.join(String.fromCharCode(10)) : "Jurnalul rulării apare aici.";
+  if (atEnd) log.scrollTop = log.scrollHeight;
+}
+async function pollSorting() {
+  try { renderSorting(await api("GET", "sortare")); } catch (e) { /* starea revine la următoarea citire */ }
+  setTimeout(pollSorting, 1500);
+}
+
 /* ---------------------------------------------------------------- pornire */
 // Fluxul MJPEG e o singură cerere lungă: după o repornire a serverului browserul păstrează ultimul cadru și nu
 // reface singur conexiunea. Se reconectează când starea revine după o pauză, la o eroare a imaginii sau la clic.
@@ -547,16 +624,25 @@ if (FEATURES.execute) {
   $("x-run").addEventListener("click", execute);
   $("x-stop").addEventListener("click", stop);
 }
+if (FEATURES.sorting) {
+  $("s-photo").addEventListener("click", () => sortAction("poza"));
+  $("s-start").addEventListener("click", () => sortAction("start"));
+  $("s-stop").addEventListener("click", () => sortAction("stop"));
+  pollSorting();
+}
 poll();
 </script>
 </body></html>
 """
 
 
-def render_page(location: str, workbench: bool = False, execute: bool = False) -> str:
-    """Pagina, cu panourile mesei de lucru doar dacă există `api` și cu „Execuție” doar dacă e permisă."""
-    page = _HEAD + (_STATUS if workbench else "") + (_EXECUTE if workbench and execute else "") + _SCRIPT
-    features = json.dumps({"workbench": bool(workbench), "execute": bool(workbench and execute)})
+def render_page(location: str, workbench: bool = False, execute: bool = False, sorting: bool = False) -> str:
+    """Pagina, cu panourile mesei de lucru doar dacă există `api`, cu „Execuție” doar dacă e permisă și cu
+    „Sortare” doar dacă există scriptul de sortare."""
+    page = (_HEAD + (_SORTING if sorting else "") + (_STATUS if workbench else "")
+            + (_EXECUTE if workbench and execute else "") + _SCRIPT)
+    features = json.dumps({"workbench": bool(workbench), "execute": bool(workbench and execute),
+                           "sorting": bool(sorting)})
     return (page.replace("__LOCATION__", html.escape(location))
                 .replace("__WB_CLASS__", "" if workbench else "hidden")
                 .replace("__EXEC_CLASS__", "" if workbench and execute else "hidden")
