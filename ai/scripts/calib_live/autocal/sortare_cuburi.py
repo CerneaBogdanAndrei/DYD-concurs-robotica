@@ -25,19 +25,33 @@ verificarea, corecțiile, învățarea în `invatat.json`); verificarea se uită
 până nu mai e niciun cub în zonă. La sfârșit: după pasul 2 brațul trece în dreapta (10,12 cm), după pașii 3 și 4 revine
 în punctul de referință. Starea e în `sortare_stare.json`, jurnalul punerilor în `sortare_cuburi.json`.
 
+O singură punere pe cub (echipa, 2026-10-30: „nu mai pune un cub de mai multe ori”): comanda celei mai bune puneri de
+la învățare pe celula lui (`puneri_bune.json`, din `puneri_bune.py`), fără corecții; cubul pus se măsoară doar pentru
+jurnal. Punerea cu verificare, corecții și învățare (ca la `traseu_cub.py`) rămâne cu `--corectii`.
+
+Cu mai multe cuburi pe foaie, fețele lor laterale albe acoperă liniile caroiajului și analiza îl respinge
+(`grid_line_unsupported`: tuș pe 56-58% dintr-o linie, pragul e 60%). Atunci, dacă restul potrivirii e bun, analiza se
+reface aici cu pragul RELAX_LINE_SUPPORT (acordul echipei, 2026-10-30; `system.yaml` rămâne la 0,6).
+
     ai/.venv/bin/python ai/scripts/calib_live/autocal/sortare_cuburi.py pas1
+    ai/.venv/bin/python ai/scripts/calib_live/autocal/sortare_cuburi.py tot    # pașii 2, 3, 4 la rând, apoi în centru
     ai/.venv/bin/python ai/scripts/calib_live/autocal/sortare_cuburi.py pas2   # stânga, apoi în dreapta
     ai/.venv/bin/python ai/scripts/calib_live/autocal/sortare_cuburi.py pas3   # dreapta, apoi în centru
     ai/.venv/bin/python ai/scripts/calib_live/autocal/sortare_cuburi.py pas4   # sub caroiaj, apoi în centru
     ... --doar-vede   # pașii 2-4: doar vederile, cuburile găsite și cum ar fi prinse, fără pick
+    ... --corectii    # pașii 2-4: punerea cu verificare și corecții (până la 4 puneri pe cub), ca la învățare
+
+Paginile previzualizării (`brain camera preview`) au butoanele „Fă poza” (pas1) și „Start” (tot).
 """
 import argparse
 import json
 import math
 import os
 import shutil
+import subprocess
 import sys
 import time
+import urllib.request
 
 import cv2
 import numpy as np
@@ -45,7 +59,7 @@ import numpy as np
 import foaie_la_loc
 import traseu_cub
 from traseu_cub import CLIPPED, COL, GOOD_MARGIN_MM, GOOD_OFF_MM, GRAB, GRIP_EMPTY, HELD_MAX_RATIO, HERE, K_RANGE, \
-    K_WRIST, LOCATION, MAX_FIX_YAW, MAX_FIXES, PRIOR_XY, ROOT, ROW, YAW_TOL, Cube, Sheet, analyses, corrected, \
+    K_WRIST, LOCATION, MAX_FIX_YAW, MAX_FIXES, PREVIEW, PRIOR_XY, ROOT, ROW, YAW_TOL, Cube, Sheet, corrected, \
     grasp_text, lateral_dir, load_app_config, load_model, post, predict, predict_xy, predict_yaw0, save_model, say, \
     start_pose, status, wrap45
 from vedere import CUBE_MM, DIST, K, Camera, cube_tops, lines, outside_gap_mm, visible_crossing
@@ -86,8 +100,65 @@ MAX_MISALIGN = 30.0  # cubul se aliniază singur între degete până la atâtea
 MAX_WRIST = 10.0  # ... peste, încheietura se rotește cel mult atât (degetele ajung la înălțimi diferite)
 PICK_OUTSIDE_CELLS = 3  # config.ts: pick-ul ia cuburi până la atâtea celule în afara caroiajului
 GRIP_CLOSED = 140  # config.ts: gheara strânsă (după un pick)
+BEST = HERE / "puneri_bune.json"  # cea mai bună punere de la învățare, pe celule (puneri_bune.py)
+# analiza refăcută când liniile sunt acoperite de cuburi: pragul de tuș pe linii și cât de bună trebuie să fie restul
+# potrivirii (2026-10-30, 4 cuburi: structura 0,89-0,90, reziduul 0,03 celule, 8 linii măsurate, tuș 0,56-0,58)
+RELAX_LINE_SUPPORT = 0.45
+RELAX_MIN_STRUCTURE = 0.8
+RELAX_MAX_RESIDUAL = 0.1  # celule
+RELAX_MIN_LINES = 6
+LINE_UNSUPPORTED = "grid_line_unsupported"
 
 SHEET = None  # Sheet(), încărcat în main
+_relaxed = {}  # pipeline-ul cu pragul relaxat (construit la prima nevoie) și ultima imagine adnotată de el
+
+
+def lines_hidden(obs):
+    """Analiza e respinsă doar pentru că o linie a caroiajului are prea puțin tuș, iar restul potrivirii e bun."""
+    m = obs["geometry"].get("metrics") or {}
+    return (not obs["actionable"] and obs.get("reasons") == [LINE_UNSUPPORTED]
+            and m.get("structure_score", 0.0) >= RELAX_MIN_STRUCTURE
+            and m.get("line_residual_cells", 1.0) <= RELAX_MAX_RESIDUAL
+            and m.get("lines_measured", 0.0) >= RELAX_MIN_LINES
+            and m.get("min_line_support", 0.0) >= RELAX_LINE_SUPPORT)
+
+
+def relaxed_analysis():
+    """Analiza ultimelor cadre (ca previzualizarea, 5 cadre) cu pragul de tuș pe linii RELAX_LINE_SUPPORT, doar aici.
+    -> (observația, ultimul cadru) sau None dacă tot nu e acționabilă."""
+    import dataclasses
+
+    from brain.cli.preview import analyze_frames
+    from brain.perception.pipeline import VisionPipeline
+
+    if "pipeline" not in _relaxed:
+        cfg = load_app_config(ROOT / "ai/config")
+        vision = cfg.system.vision
+        geometry = dataclasses.replace(vision.geometry, min_line_support=RELAX_LINE_SUPPORT)
+        system = dataclasses.replace(cfg.system, vision=dataclasses.replace(vision, geometry=geometry))
+        _relaxed["pipeline"] = VisionPipeline(system, cfg.colors)
+    frames = []
+    for _ in range(5):
+        jpg = urllib.request.urlopen(f"{PREVIEW}/snapshot.jpg", timeout=10).read()
+        frames.append(cv2.imdecode(np.frombuffer(jpg, np.uint8), 1))
+        time.sleep(0.15)
+    done = analyze_frames(_relaxed["pipeline"], frames, LOCATION, 85)
+    if not done.observation_dict["actionable"]:
+        return None
+    _relaxed["jpeg"] = done.jpeg
+    return dict(done.observation_dict, relaxed=True), frames[-1]
+
+
+def analyses(n=2):
+    """Ca traseu_cub.analyses; o analiză respinsă doar pentru liniile acoperite de cuburi se reface cu pragul relaxat."""
+    out = []
+    for obs, img in traseu_cub.analyses(n):
+        if lines_hidden(obs):
+            again = relaxed_analysis()
+            if again is not None:
+                obs, img = again
+        out.append((obs, img))
+    return out
 
 
 # ------------------------------------------------------------------ pasul 1
@@ -149,11 +220,16 @@ def grid_colors(tries=5, lenient=False):
 
 
 def pas1():
+    """Harta culorilor. O celulă fără culoare lângă un cub (fața lui laterală, în perspectivă) e goală, ca la `lenient`;
+    imaginea salvată e analiza din care vine harta."""
     start_pose()
-    cells, obs = grid_colors()
+    cells, obs = grid_colors(lenient=True)
     if cells is None:
         sys.exit("Două analize la rând nu dau aceleași celule și culori (sau o celulă e nesigură): verificați cuburile.")
-    shutil.copy(PREVIEW_DIR / "latest_annotated.jpg", MAP.with_suffix(".jpg"))
+    if obs.get("relaxed"):
+        MAP.with_suffix(".jpg").write_bytes(_relaxed["jpeg"])
+    else:
+        shutil.copy(PREVIEW_DIR / "latest_annotated.jpg", MAP.with_suffix(".jpg"))
     json.dump({"at": time.strftime("%Y-%m-%d %H:%M:%S"), "center_uv": CENTER_UV, "cells": cells,
                "colors_ro": {k: COLORS[v] for k, v in cells.items()}, "image": MAP.with_suffix(".jpg").name},
               open(MAP, "w"), indent=1, ensure_ascii=False)
@@ -172,7 +248,7 @@ def raw_frames(n):
     și mai nou."""
     out, last = [], None
     while len(out) < n:
-        analyses(1)
+        traseu_cub.analyses(1)
         path = PREVIEW_DIR / "latest_raw.jpg"
         stamp = os.stat(path).st_mtime_ns
         raw = cv2.imread(str(path))
@@ -593,6 +669,51 @@ class Placer:
             say(f"  pun din nou corectat cu {-ex:+.1f} mm pe coloane, {-ey:+.1f} mm spre robot, încheietura {yaw_cmd:+.1f} grd")
 
 
+    def place_once(self, r, c, filled, source):
+        """Cubul din gheară pe celula (r, c) dintr-o singură punere, cu comanda celei mai bune puneri de la învățare pe
+        celula asta (`puneri_bune.json`; fără ea, ținta corectată ca la `place`), fără nicio corecție. Cubul pus se
+        măsoară doar pentru jurnal (poate rămâne nemăsurat). -> (uv-ul lui sau al țintei, rotirea sau None, bine pus)."""
+        cube = self.cube
+        left, right, top, bottom = SHEET.box(r, c)
+        target = ((left + right) / 2.0, (top + bottom) / 2.0)
+        best = (json.load(open(BEST))["cells"] if BEST.exists() else {}).get(f"r{r}c{c}")
+        if best:
+            place_uv, yaw_cmd = list(best["sent_uv"]), float(best["yaw_cmd"])
+            why = f"cea mai bună punere de la învățare ({best['off_mm']:.1f} mm, rotit {best['yaw'] or 0:+.1f} grd)"
+        else:
+            place_uv, yaw_cmd, _ = self.aim(target)
+            why = "fără punere învățată pe celulă: ținta corectată din ce s-a învățat"
+        say(f"  pun pe r{r}c{c} o singură dată, cu {why}: uv ({place_uv[0]:.3f}; {place_uv[1]:.3f}), "
+            f"încheietura {yaw_cmd:+.1f} grd")
+        res = post("place", {"location": LOCATION, "uv": place_uv, "yaw_deg": yaw_cmd})
+        if res.get("result") is not True:
+            sys.exit(f"place refuzat: {res} (cubul e încă în gheară)")
+        post("beep", {"n": 1})
+        start_pose()
+        found = look_new(cube, filled, tries=2)
+        entry = {"cell": f"r{r}c{c}", "from": source, "fix": 0, "once": True, "target_uv": target, "sent_uv": place_uv,
+                 "yaw_cmd": yaw_cmd, "best": best and best["source"]}
+        if found is None:
+            say("  pus; camera nu vede acum cubul nou destul de clar ca să-l măsoare (rămâne nemăsurat)")
+            landed, yaw, good = list(target), None, None
+        else:
+            got, landed, _, _ = found
+            yaw = got["yaw_deg"]
+            fp = cube.footprint_mm(landed, yaw)
+            margins = {"stânga": min(x for x, _ in fp) - left * COL, "dreapta": right * COL - max(x for x, _ in fp),
+                       "sus": min(y for _, y in fp) - top * ROW, "jos": bottom * ROW - max(y for _, y in fp)}
+            off = math.hypot((landed[0] - target[0]) * COL, (landed[1] - target[1]) * ROW)
+            good = bool((got["row"], got["col"]) == (r, c) and off <= GOOD_OFF_MM
+                        and min(margins.values()) >= GOOD_MARGIN_MM and abs(yaw) <= YAW_TOL)
+            say(f"  pus: {off:.1f} mm de centru, rotit {yaw:+.1f} grd; până la linii: "
+                + ", ".join(f"{k} {v:+.1f}" for k, v in margins.items()) + f" mm -> {'BINE' if good else 'așa rămâne'}")
+            entry.update(landed_uv=[float(v) for v in landed], yaw=yaw, off_mm=off, margins_mm=margins, good=good)
+        self.log.append(entry)
+        json.dump({"at": time.strftime("%Y-%m-%d %H:%M:%S"), "moves": self.log}, open(OUT, "w"), indent=1,
+                  ensure_ascii=False)
+        return [float(v) for v in landed], yaw, good
+
+
 # ------------------------------------------------------------------ pașii 2-4
 
 
@@ -652,9 +773,17 @@ def check_grid(state, cube):
     save_state(state)
 
 
-def zone(step, only_look=False, held=None):
+def zone(step, only_look=False, held=None, fixes=False):
     """Zona pasului `step`; `held` = celula (r, c) pe care trebuie pus întâi cubul care e deja în gheară (o rulare
-    oprită după ce l-a prins)."""
+    oprită după ce l-a prins). Fiecare cub e pus o singură dată (`Placer.place_once`); cu `fixes`, cu verificare și
+    corecții (`Placer.place`)."""
+
+    def put(r, c, source):
+        if fixes:
+            got, good = placer.place(r, c, state["filled"], source)
+            return [float(v) for v in got["landed_uv"]], got["yaw_deg"], good
+        return placer.place_once(r, c, state["filled"], source)
+
     name, views = ZONES[step]
     colors = json.load(open(MAP))["cells"]
     state = load_state()
@@ -674,9 +803,8 @@ def zone(step, only_look=False, held=None):
         key = f"r{r}c{cc}"
         if key in state["filled"] or key not in colors:
             sys.exit(f"{key} e deja pusă sau nu e pe hartă: cubul din gheară nu are unde merge.")
-        got, good = placer.place(r, cc, state["filled"], "din gheară")
-        state["filled"][key] = {"color": colors[key], "landed_uv": [float(v) for v in got["landed_uv"]],
-                                "yaw": got["yaw_deg"], "good": good}
+        landed, yaw, good = put(r, cc, "din gheară")
+        state["filled"][key] = {"color": colors[key], "landed_uv": landed, "yaw": yaw, "good": good}
         save_state(state)
     fails, view, at_start = 0, views[0], True
     while True:
@@ -739,28 +867,53 @@ def zone(step, only_look=False, held=None):
         if extra:
             post("beep", {"n": 4})
             sys.exit(f"Pe caroiaj apare un cub în plus ({', '.join(extra)}): opresc cu cubul în gheară.")
-        got, good = placer.place(r, cc, state["filled"], f"{name} ({c['center_mm'][0]:.0f}; {c['center_mm'][1]:.0f})")
-        at_start = True  # punerea se încheie cu verificarea din poza de start
-        state["filled"][f"r{r}c{cc}"] = {"color": c["color"], "landed_uv": [float(v) for v in got["landed_uv"]],
-                                         "yaw": got["yaw_deg"], "good": good,
+        landed, yaw, good = put(r, cc, f"{name} ({c['center_mm'][0]:.0f}; {c['center_mm'][1]:.0f})")
+        at_start = True  # punerea se încheie în poza de start
+        state["filled"][f"r{r}c{cc}"] = {"color": c["color"], "landed_uv": landed, "yaw": yaw, "good": good,
                                          "from_mm": [float(v) for v in c["center_mm"]]}
         save_state(state)
     return view
 
 
+def checks():
+    """Înainte de orice mișcare: serviciul răspunde (brațul pe I2C) și alimentarea nu e sub tensiune acum."""
+    try:
+        joints = post("read_joints")
+    except Exception as e:  # noqa: BLE001 - orice eroare de conexiune oprește înainte de mișcare
+        sys.exit(f"Serviciul de mișcare nu răspunde ({e}): porniți-l înainte.")
+    try:
+        throttled = int(subprocess.run(["vcgencmd", "get_throttled"], capture_output=True, text=True,
+                                       timeout=5).stdout.strip().split("=")[1], 16)
+    except (OSError, IndexError, ValueError, subprocess.SubprocessError):
+        throttled = None
+    if throttled is not None and throttled & 0x1:
+        sys.exit(f"Alimentarea Pi-ului e sub tensiune acum (throttled={throttled:#x}): brațul s-ar putea bloca. Opresc.")
+    say(f"Verificări: brațul citește {joints.get('result') if isinstance(joints, dict) else joints}, "
+        f"throttled={'?' if throttled is None else hex(throttled)}")
+
+
 def main():
     global SHEET
     ap = argparse.ArgumentParser()
-    ap.add_argument("pas", choices=["pas1", "pas2", "pas3", "pas4"])
+    ap.add_argument("pas", choices=["pas1", "pas2", "pas3", "pas4", "tot"])
     ap.add_argument("--doar-vede", action="store_true", help="pașii 2-4: doar vederile, cuburile și cum ar fi prinse")
     ap.add_argument("--in-gheara", metavar="RC", help="un cub e deja în gheară: întâi se pune pe celula RC (ex. 00)")
+    ap.add_argument("--corectii", action="store_true", help="punerea cu verificare și corecții, ca la învățare")
     a = ap.parse_args()
+    checks()
     if a.pas == "pas1":
         pas1()
         return
     SHEET = traseu_cub.SHEET = Sheet()
     post("beep", {"n": 2})
-    view = zone(a.pas, a.doar_vede, (int(a.in_gheara[0]), int(a.in_gheara[1])) if a.in_gheara else None)
+    held = (int(a.in_gheara[0]), int(a.in_gheara[1])) if a.in_gheara else None
+    if a.pas == "tot":  # pașii 2, 3 și 4 la rând (fiecare zonă pornește din punctul de referință), apoi în centru
+        if not MAP.exists():
+            sys.exit("Lipsește harta culorilor: întâi pasul 1 („Fă poza”).")
+        for i, step in enumerate(["pas2", "pas3", "pas4"]):
+            view = zone(step, a.doar_vede, held if i == 0 else None, a.corectii)
+    else:
+        view = zone(a.pas, a.doar_vede, held, a.corectii)
     if a.pas == "pas2" and not a.doar_vede:  # din stânga în dreapta, în lungul lui r1 (10,12 cm)
         post("move_joints", {"angles": VIEWS[ZONES["pas3"][1][0]]["sent"], "time_ms": 2500})
         say("Brațul a trecut în dreapta; urmează pasul 3.")
