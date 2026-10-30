@@ -79,6 +79,35 @@ describe("caroiaj", () => {
     close(grid.z, (9.7 + 4.3 + 14.1 + 8.7) / 4 + dz);
   });
 
+  it("corecția pe linii se adaugă planului, liniar între centrele liniilor", () => {
+    const pts = taught(["r0c0", "r0c2", "r2c0", "r2c2"]);
+    const plan = Grid.fromPoints(pts).grid;
+    const { grid } = Grid.fromPoints(pts, { zRows: [0, 0, -14] });
+    close(grid.zAt(0.5, 0.5), plan.zAt(0.5, 0.5));
+    close(grid.zAt(1.5, 1.5), plan.zAt(1.5, 1.5));
+    close(grid.zAt(1.5, 2.0), plan.zAt(1.5, 2.0) - 7);
+    close(grid.zAt(2.5, 2.5), plan.zAt(2.5, 2.5) - 14);
+    close(grid.zAt(0.5, 2.9), plan.zAt(0.5, 2.9) - 14);
+    close(grid.zAt(0.5, 0.1), plan.zAt(0.5, 0.1));
+  });
+
+  it("corecția spre r0 mută punctul pe direcția liniilor, departe de robot", () => {
+    const pts = taught(["r0c0", "r0c2", "r2c0", "r2c2"]);
+    const plan = Grid.fromPoints(pts).grid;
+    const { grid, residuals } = Grid.fromPoints(pts, { fwdRows: [0, 0, 15] });
+    const d = (u: number, v: number) => {
+      const [a, b] = [grid.uvToXy(u, v), plan.uvToXy(u, v)];
+      return [a[0] - b[0], a[1] - b[1]] as const;
+    };
+    close(Math.hypot(...d(1.5, 1.5)), 0);
+    const [dx, dy] = d(2.5, 2.5);
+    close(Math.hypot(dx, dy), 15);
+    // spre r0 = invers lui erow (de la r0 spre r2)
+    close((dx * grid.erow[0] + dy * grid.erow[1]) / Math.hypot(...grid.erow), -15);
+    close(Math.hypot(...d(0.5, 2.0)), 7.5);
+    assert.ok(residuals.every((r) => r.errMm < 3), "eroarea de potrivire nu include corecția");
+  });
+
   it("respinge celule coliniare sau prea puține", () => {
     assert.throws(() => Grid.fromPoints(taught(["r0c0", "r0c1", "r0c2"])), /necoliniare/);
     assert.throws(() => Grid.fromPoints(taught(["r0c0", "r2c2"])), /necoliniare/);

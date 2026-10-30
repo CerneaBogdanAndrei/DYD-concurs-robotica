@@ -53,6 +53,23 @@ export interface Residual {
   z: number;
 }
 
+/**
+ * Corecții pe linii r0..r2 peste modelul din punctele învățate, măsurate în poza de pick (mm): zRows = înălțimea
+ * (+ = mai sus), fwdRows = spre r0 (+ = mai departe de robot). Brațul greșește diferit după unghiurile lui, iar
+ * planul colțurilor nu prinde asta (2026-10-30, small: pe r2 gheara cu ~14 mm mai sus și ~15 mm mai aproape).
+ */
+export interface RowFix {
+  zRows?: Vec3 | undefined;
+  fwdRows?: Vec3 | undefined;
+}
+
+/** Valoarea pe linii în v: liniară între centrele liniilor (v = 0,5 / 1,5 / 2,5), constantă dincolo de ele. */
+function rowInterp(rows: Vec3, v: number): number {
+  const t = Math.min(2.5, Math.max(0.5, v)) - 0.5;
+  const i = Math.min(1, Math.floor(t));
+  return rows[i]! + (rows[i + 1]! - rows[i]!) * (t - i);
+}
+
 export class Grid {
   constructor(
     /** centrul celulei r0c0 (x, y) */
@@ -65,10 +82,12 @@ export class Grid {
     readonly z: number,
     /** cât crește înălțimea de prindere de la o coloană la următoarea, respectiv de la o linie la următoarea */
     readonly dz: Vec2 = [0, 0],
+    /** corecțiile pe linii r0..r2, măsurate în poza de pick (vezi `RowFix`) */
+    readonly fix: RowFix = {},
   ) {}
 
-  /** pts: { r0c0: [x, y, z], ... } (minim 3 celule necoliniare). */
-  static fromPoints(pts: Readonly<Record<string, Vec3>>): { grid: Grid; residuals: Residual[] } {
+  /** pts: { r0c0: [x, y, z], ... } (minim 3 celule necoliniare); fix: corecțiile pe linii, peste model. */
+  static fromPoints(pts: Readonly<Record<string, Vec3>>, fix: RowFix = {}): { grid: Grid; residuals: Residual[] } {
     const A: number[][] = [];
     const X: number[] = [];
     const Y: number[] = [];
@@ -89,22 +108,24 @@ export class Grid {
     // fiecare colț, dar modelul brațului le dă la z diferite (2026-10-29: 4..14 mm); cu media, gheara cobora
     // cu ~5 mm prea jos pe un colț și prea sus pe cel opus.
     const sz = leastSquares3(A, Z)!;
-    const grid = new Grid([sx[0]!, sy[0]!], [sx[1]!, sy[1]!], [sx[2]!, sy[2]!], sz[0]! + sz[1]! + sz[2]! + C.GRASP_DZ, [
-      sz[1]!,
-      sz[2]!,
-    ]);
+    const model: [Vec2, Vec2, Vec2] = [[sx[0]!, sy[0]!], [sx[1]!, sy[1]!], [sx[2]!, sy[2]!]];
+    const z0 = sz[0]! + sz[1]! + sz[2]! + C.GRASP_DZ;
+    const base = new Grid(...model, z0, [sz[1]!, sz[2]!]);
+    // eroarea de potrivire: față de modelul fără corecții (corecțiile nu vin din punctele învățate)
     const residuals = Object.entries(pts).map(([label, p]) => {
       const [r, c] = parseCellLabel(label);
-      const q = grid.cellXy(r, c);
+      const q = base.cellXy(r, c);
       return { label, errMm: Math.hypot(q[0] - p[0], q[1] - p[1]), z: p[2] };
     });
-    return { grid, residuals };
+    return { grid: new Grid(...model, z0, [sz[1]!, sz[2]!], fix), residuals };
   }
 
   uvToXy(u: number, v: number): Vec2 {
+    // corecția spre r0 (departe de robot) merge pe direcția liniilor, invers lui erow
+    const k = this.fix.fwdRows ? -rowInterp(this.fix.fwdRows, v) / Math.hypot(...this.erow) : 0;
     return [
-      this.O[0] + (u - 0.5) * this.ecol[0] + (v - 0.5) * this.erow[0],
-      this.O[1] + (u - 0.5) * this.ecol[1] + (v - 0.5) * this.erow[1],
+      this.O[0] + (u - 0.5) * this.ecol[0] + (v - 0.5 + k) * this.erow[0],
+      this.O[1] + (u - 0.5) * this.ecol[1] + (v - 0.5 + k) * this.erow[1],
     ];
   }
 
@@ -114,7 +135,8 @@ export class Grid {
 
   /** Înălțimea de prindere în punctul (u, v), după planul punctelor învățate. */
   zAt(u: number, v: number): number {
-    return this.z + (u - 1.5) * this.dz[0] + (v - 1.5) * this.dz[1];
+    const row = this.fix.zRows ? rowInterp(this.fix.zRows, v) : 0;
+    return this.z + (u - 1.5) * this.dz[0] + (v - 1.5) * this.dz[1] + row;
   }
 
   /** Unghi măsurat în imaginea rectificată (față de axa coloanelor) -> unghi robot. */

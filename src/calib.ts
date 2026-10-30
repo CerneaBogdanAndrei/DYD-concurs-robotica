@@ -13,6 +13,13 @@ export interface GridSite {
   kind: "grid";
   /** { r0c0: [x, y, z], ... } punctele învățate cu mâna */
   points: Record<string, Vec3>;
+  /**
+   * Corecțiile pe linii r0..r2, peste modelul punctelor, măsurate în poza de pick (2026-10-30, small: vârfurile
+   * degetelor la 21 mm deasupra foii pe r1c1 și ~35 mm pe r2c2; pe r2c2 gheara cu ~15 mm prea aproape de robot).
+   * z_rows: înălțimea (mm, + = mai sus); fwd_rows: spre r0 (mm, + = mai departe de robot).
+   */
+  z_rows?: Vec3;
+  fwd_rows?: Vec3;
 }
 
 export interface PointSite {
@@ -88,7 +95,7 @@ export function requireSite(calib: Calib, name: string): Site {
 
 /** Modelul de caroiaj potrivit din punctele învățate ale unui loc. */
 export function gridOf(site: GridSite): Grid {
-  return Grid.fromPoints(site.points).grid;
+  return Grid.fromPoints(site.points, { zRows: site.z_rows, fwdRows: site.fwd_rows }).grid;
 }
 
 /** Punctele măsurate ale ghearei, ordonate după deschidere; [] dacă sunt mai puțin de 2 sau se contrazic. */
