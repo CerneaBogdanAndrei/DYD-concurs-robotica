@@ -60,6 +60,7 @@ FAINT = "faint_color_object"  # o urmă slabă pe hârtie (2026-10-30: pe r1c1, 
 # puțină culoare pe celulă, fără un cub: 2026-10-30, verdele lăsat la ~5 mm în stânga lui r0 dădea pe r0c0 o bucată
 # din fața lui (tăiată de marginea imaginii), cu centrul estimat în celulă
 AMBIGUOUS = "ambiguous_colored_area"
+NO_COLOR = ("edges_without_color", "dark_object_without_color", FAINT, AMBIGUOUS)  # celulă fără un cub colorat
 
 VIEWS = json.load(open(HERE / "vederi/caroiaj_gol/calib_vederi.json"))["views"]
 OBSERVE = VIEWS["centru"]["sent"]  # = observe_small
@@ -105,15 +106,26 @@ def weak(c, lenient=False):
     return c["occupancy"] != "occupied" and (FAINT in reasons or (lenient and AMBIGUOUS in reasons))
 
 
+def spill(c, obs):
+    """O celulă fără culoare lângă un cub de pe caroiaj: fața lui de sus sau cea laterală, văzute în perspectivă peste
+    ea. 2026-10-30: verdele de pe r1c1, cu baza citită la 89 în loc de 90 grd, dădea pe r2c1 „obiect întunecat” (eticheta
+    de pe fața laterală) și pe r1c2 contururi fără culoare, la fiecare analiză."""
+    reasons = c.get("reasons", [])
+    if c["occupancy"] == "occupied" or not reasons or any(r not in NO_COLOR for r in reasons):
+        return False
+    return any(on_paper(o) and o.get("color") in COLORS and abs(o["row"] - c["row"]) + abs(o["col"] - c["col"]) == 1
+               for o in obs["cells"])
+
+
 def cell_colors(obs, lenient=False):
     """{'r0c0': 'yellow', ...} pentru celulele ocupate; None dacă analiza nu e sigură (caroiajul negăsit, o celulă
     nesigură sau un cub cu o culoare necunoscută). O celulă cu doar o urmă slabă de culoare e goală; cu `lenient`, și
-    una cu puțină culoare ambiguă (un cub de lângă caroiaj)."""
+    una cu puțină culoare ambiguă (un cub de lângă caroiaj), cubul din gheară sau o celulă fără culoare lângă un cub."""
     if not obs["geometry"].get("ok"):
         return None
     out = {}
     for c in obs["cells"]:
-        if c["occupancy"] == "empty" or weak(c, lenient) or (lenient and held_strip(c)):
+        if c["occupancy"] == "empty" or weak(c, lenient) or (lenient and (held_strip(c) or spill(c, obs))):
             continue
         if c["occupancy"] != "occupied" or c.get("color") not in COLORS:
             return None
@@ -623,6 +635,9 @@ def check_grid(state, cube):
     vague = [f"r{c['row']}c{c['col']}" for c in obs["cells"] if weak(c, True) and AMBIGUOUS in c.get("reasons", [])]
     if vague:
         say(f"  {', '.join(vague)}: puțină culoare, fără un cub (un cub de lângă caroiaj?): luate ca goale")
+    near = [f"r{c['row']}c{c['col']}" for c in obs["cells"] if spill(c, obs) and not weak(c, True)]
+    if near:
+        say(f"  {', '.join(near)}: fără culoare, lângă un cub (fața lui văzută în perspectivă): luate ca goale")
     for c in obs["cells"]:
         key = f"r{c['row']}c{c['col']}"
         if key in cells and key not in state["filled"]:
