@@ -1,0 +1,20 @@
+{
+ "at": "2026-10-30 05:24:06",
+ "center_uv": [
+  1.5,
+  1.5
+ ],
+ "cells": {
+  "r0c0": "red",
+  "r0c2": "blue",
+  "r1c1": "green",
+  "r2c0": "yellow"
+ },
+ "colors_ro": {
+  "r0c0": "roșu",
+  "r0c2": "albastru",
+  "r1c1": "verde",
+  "r2c0": "galben"
+ },
+ "image": "harta_culori.jpg"
+}
