@@ -161,18 +161,25 @@ class Cube:
         cells = [c for c in obs["cells"] if c["occupancy"] == "occupied" and c["uv_top"]]
         if len(cells) != 1:
             return None
-        # tăiată de marginea de sus a imaginii (rândul r0) se completează în base_uv; tăiată altundeva, nu
-        return None if CLIPPED in cells[0]["reasons"] and cells[0]["uv_top"][1] >= 0.8 else cells[0]
+        # tăiată de marginea de sus (rândul r0) sau din stânga a imaginii (coloana c0) se completează în base_uv;
+        # tăiată altundeva, nu
+        u, v = cells[0]["uv_top"]
+        return None if CLIPPED in cells[0]["reasons"] and v >= 0.8 and u >= 0.8 else cells[0]
 
     def base_uv(self, cell):
         """Centrul bazei cubului (uv), corectat de paralaxă. Pe rândul r0 fața de sus iese peste marginea de sus a
         imaginii: viziunea o dă tăiată, întreagă pe coloane și mai scurtă pe linii; centrul se completează spre
-        partea tăiată cu jumătate din diferența laturilor."""
+        partea tăiată cu jumătate din diferența laturilor. La fel pe coloana c0, spre marginea din stânga (camera
+        rotită pe suport: 2026-10-30, ~50 px)."""
         u, v = cell["uv_top"]
         H = self.loc.camera_height_mm
         sides = [cell["metrics"].get(k) for k in ("side_w_mm", "side_h_mm")]
-        if CLIPPED in cell["reasons"] and v < 0.8 and None not in sides:
-            v -= (max(sides) - min(sides)) / 2.0 * H / (H - self.mm) / ROW
+        if CLIPPED in cell["reasons"] and None not in sides:
+            d = (max(sides) - min(sides)) / 2.0 * H / (H - self.mm)
+            if v < 0.8:
+                v -= d / ROW
+            elif u < 0.8:
+                u -= d / COL
         return correct_parallax((u, v), self.mm, H, tuple(self.loc.nadir_uv))
 
     def footprint_mm(self, uv, yaw_deg):
