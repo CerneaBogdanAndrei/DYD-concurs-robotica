@@ -92,6 +92,13 @@ SHEET = None  # Sheet(), încărcat în main
 # ------------------------------------------------------------------ pasul 1
 
 
+def held_strip(c):
+    """Cubul din gheară, văzut din poza de start jos, peste r2, ca o fâșie, nu un cub de pe foaie (fața lui are ~29 x
+    29 mm). 2026-10-30: ținut rotit după o corecție, era 27 x 11 mm, cu size_ratio 0,66 pe r2c1 (peste pragul de 0,6)."""
+    sides = [c["metrics"].get(k) for k in ("side_w_mm", "side_h_mm")]
+    return c["row"] == 2 and None not in sides and min(sides) < 18.0 and CLIPPED not in c.get("reasons", [])
+
+
 def weak(c, lenient=False):
     """Celula are doar o urmă de culoare, nu un cub: o urmă slabă pe hârtie sau (`lenient`) puțină culoare ambiguă."""
     reasons = c.get("reasons", [])
@@ -106,7 +113,7 @@ def cell_colors(obs, lenient=False):
         return None
     out = {}
     for c in obs["cells"]:
-        if c["occupancy"] == "empty" or weak(c, lenient):
+        if c["occupancy"] == "empty" or weak(c, lenient) or (lenient and held_strip(c)):
             continue
         if c["occupancy"] != "occupied" or c.get("color") not in COLORS:
             return None
@@ -432,17 +439,21 @@ def plan_pick(c, others, rg, learned):
 # ------------------------------------------------------------------ punerea pe caroiaj (ca în traseu_cub.py)
 
 
+def on_paper(c):
+    """Celula e ocupată de un cub de pe foaie (cubul din gheară, văzut jos ca o fâșie, nu se numără)."""
+    return (c["occupancy"] == "occupied" and c["metrics"].get("size_ratio", 1.0) >= HELD_MAX_RATIO
+            and not held_strip(c))
+
+
 def occupied(obs):
-    """Celulele ocupate de un cub de pe foaie (cubul din gheară, văzut jos ca o fâșie mică, nu se numără)."""
-    return {f"r{c['row']}c{c['col']}" for c in obs["cells"] if c["occupancy"] == "occupied"
-            and c["metrics"].get("size_ratio", 1.0) >= HELD_MAX_RATIO}
+    """Celulele ocupate de un cub de pe foaie."""
+    return {f"r{c['row']}c{c['col']}" for c in obs["cells"] if on_paper(c)}
 
 
 def new_cube(obs, filled):
     """Cubul de pe o celulă care nu e printre cele puse deja; None dacă nu e exact unul (sau e tăiat altundeva decât
     sus pe r0 / în stânga pe c0, ca în traseu_cub.Cube.seen)."""
-    cells = [c for c in obs["cells"] if c["occupancy"] == "occupied" and c["uv_top"]
-             and c["metrics"].get("size_ratio", 1.0) >= HELD_MAX_RATIO and f"r{c['row']}c{c['col']}" not in filled]
+    cells = [c for c in obs["cells"] if on_paper(c) and c["uv_top"] and f"r{c['row']}c{c['col']}" not in filled]
     if len(cells) != 1:
         return None
     u, v = cells[0]["uv_top"]
@@ -626,7 +637,9 @@ def check_grid(state, cube):
     save_state(state)
 
 
-def zone(step, only_look=False):
+def zone(step, only_look=False, held=None):
+    """Zona pasului `step`; `held` = celula (r, c) pe care trebuie pus întâi cubul care e deja în gheară (o rulare
+    oprită după ce l-a prins)."""
     name, views = ZONES[step]
     colors = json.load(open(MAP))["cells"]
     state = load_state()
@@ -635,10 +648,21 @@ def zone(step, only_look=False):
     placer = Placer(cube)
     say(f"Pasul {step[-1]}, {name}. Harta: " + ", ".join(f"{k} {COLORS[v]}" for k, v in sorted(colors.items()))
         + f"; puse deja: {', '.join(sorted(state['filled'])) or 'niciuna'}")
-    if status()["grip"] == GRIP_CLOSED:
+    if status()["grip"] == GRIP_CLOSED and held is None:
         sys.exit("Gheara e închisă: poate ține un cub (o rulare oprită la mijloc?). Scoateți-l / deschideți gheara.")
+    if held is not None and (status()["grip"] != GRIP_CLOSED or not holding()[0]):
+        sys.exit("--in-gheara: gheara nu ține niciun cub (deschisă sau goală la ultimul pick).")
     start_pose()
     check_grid(state, cube)
+    if held is not None:
+        r, cc = held
+        key = f"r{r}c{cc}"
+        if key in state["filled"] or key not in colors:
+            sys.exit(f"{key} e deja pusă sau nu e pe hartă: cubul din gheară nu are unde merge.")
+        got, good = placer.place(r, cc, state["filled"], "din gheară")
+        state["filled"][key] = {"color": colors[key], "landed_uv": [float(v) for v in got["landed_uv"]],
+                                "yaw": got["yaw_deg"], "good": good}
+        save_state(state)
     fails, view, at_start = 0, views[0], True
     while True:
         cubes, blobs, view = search(views, at_start)
@@ -714,13 +738,14 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("pas", choices=["pas1", "pas2", "pas3", "pas4"])
     ap.add_argument("--doar-vede", action="store_true", help="pașii 2-4: doar vederile, cuburile și cum ar fi prinse")
+    ap.add_argument("--in-gheara", metavar="RC", help="un cub e deja în gheară: întâi se pune pe celula RC (ex. 00)")
     a = ap.parse_args()
     if a.pas == "pas1":
         pas1()
         return
     SHEET = traseu_cub.SHEET = Sheet()
     post("beep", {"n": 2})
-    view = zone(a.pas, a.doar_vede)
+    view = zone(a.pas, a.doar_vede, (int(a.in_gheara[0]), int(a.in_gheara[1])) if a.in_gheara else None)
     if a.pas == "pas2" and not a.doar_vede:  # din stânga în dreapta, în lungul lui r1 (10,12 cm)
         post("move_joints", {"angles": VIEWS[ZONES["pas3"][1][0]]["sent"], "time_ms": 2500})
         say("Brațul a trecut în dreapta; urmează pasul 3.")
