@@ -78,6 +78,17 @@ describe("ArmService (ArmInterface peste Robot)", () => {
     assert.ok(Math.abs(a.y - 60) < 1e-9 && Math.abs(b.y - 70) < 1e-9); // un sfert de celulă = 10 mm
   });
 
+  it("pick ia și cuburi de lângă caroiaj (uv până la 3 celule în afară); place rămâne în caroiaj", async () => {
+    const { svc } = await service();
+    for (const uv of [[-0.6, 1.5], [3.6, 1.5], [1.5, 3.8]] as [number, number][]) {
+      assert.deepEqual(await svc.pick({ location: "source", uv }), { ok: true }, JSON.stringify(uv));
+    }
+    await assert.rejects(svc.pick({ location: "source", uv: [6.5, 1.5] }), ArgumentError);
+    await assert.rejects(svc.pick({ location: "source", uv: [1.5, -3.5] }), ArgumentError);
+    await assert.rejects(svc.place({ location: "source", uv: [3.6, 1.5] }), ArgumentError);
+    await assert.rejects(svc.place({ location: "source", uv: [1.5, -0.1] }), ArgumentError);
+  });
+
   it("zona are un singur punct; yaw e în sistemul robotului", async () => {
     const { svc } = await service();
     assert.deepEqual(svc.resolve("zone_red", null, 1, 30), { x: 265, y: 0, z: 15 + C.GRASP_DZ + C.CUBE_MM, yaw: 30 });

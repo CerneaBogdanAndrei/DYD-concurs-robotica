@@ -20,6 +20,11 @@ export interface GridSite {
    */
   z_rows?: Vec3;
   fwd_rows?: Vec3;
+  /**
+   * În afara caroiajului (pick-ul cuburilor scoase lângă el): corecții de înălțime [u, v, dz], măsurate cu rigla în
+   * poza de pick ca z_rows, peste modelul cu z_rows. În caroiaj nu se aplică.
+   */
+  z_out?: Vec3[];
 }
 
 export interface PointSite {
@@ -95,7 +100,7 @@ export function requireSite(calib: Calib, name: string): Site {
 
 /** Modelul de caroiaj potrivit din punctele învățate ale unui loc. */
 export function gridOf(site: GridSite): Grid {
-  return Grid.fromPoints(site.points, { zRows: site.z_rows, fwdRows: site.fwd_rows }).grid;
+  return Grid.fromPoints(site.points, { zRows: site.z_rows, fwdRows: site.fwd_rows, zOut: site.z_out }).grid;
 }
 
 /** Punctele măsurate ale ghearei, ordonate după deschidere; [] dacă sunt mai puțin de 2 sau se contrazic. */

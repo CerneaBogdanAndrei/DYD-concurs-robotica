@@ -61,6 +61,11 @@ export interface Residual {
 export interface RowFix {
   zRows?: Vec3 | undefined;
   fwdRows?: Vec3 | undefined;
+  /**
+   * În afara caroiajului (sortarea, 2026-10-30): corecții de înălțime [u, v, dz] (mm, + = mai sus), măsurate în poza
+   * de pick peste model (plan + zRows), interpolate cu inversul pătratului distanței. În caroiaj nu se aplică.
+   */
+  zOut?: Vec3[] | undefined;
 }
 
 /** Valoarea pe linii în v: liniară între centrele liniilor (v = 0,5 / 1,5 / 2,5), constantă dincolo de ele. */
@@ -136,7 +141,21 @@ export class Grid {
   /** Înălțimea de prindere în punctul (u, v), după planul punctelor învățate. */
   zAt(u: number, v: number): number {
     const row = this.fix.zRows ? rowInterp(this.fix.zRows, v) : 0;
-    return this.z + (u - 1.5) * this.dz[0] + (v - 1.5) * this.dz[1] + row;
+    return this.z + (u - 1.5) * this.dz[0] + (v - 1.5) * this.dz[1] + row + this.outside(u, v);
+  }
+
+  /** Corecția de înălțime în afara caroiajului: punctele zOut, ponderate cu 1/distanța²; 0 în caroiaj. */
+  private outside(u: number, v: number): number {
+    const pts = this.fix.zOut;
+    if (!pts || pts.length === 0 || (u >= 0 && u <= 3 && v >= 0 && v <= 3)) return 0;
+    let sum = 0;
+    let weights = 0;
+    for (const [pu, pv, dz] of pts) {
+      const w = 1 / ((u - pu) ** 2 + (v - pv) ** 2 + 0.01);
+      sum += w * dz;
+      weights += w;
+    }
+    return sum / weights;
   }
 
   /** Unghi măsurat în imaginea rectificată (față de axa coloanelor) -> unghi robot. */

@@ -108,6 +108,25 @@ describe("caroiaj", () => {
     assert.ok(residuals.every((r) => r.errMm < 3), "eroarea de potrivire nu include corecția");
   });
 
+  it("corecția din afara caroiajului nu schimbă nimic în el", () => {
+    const pts = taught(["r0c0", "r0c2", "r2c0", "r2c2"]);
+    const fix = { zRows: [0, 0, -14] as Vec3 };
+    const plan = Grid.fromPoints(pts, fix).grid;
+    const zOut: Vec3[] = [[-0.6, 1.5, -5], [3.6, 1.5, 4], [1.5, 3.8, -10]];
+    const { grid } = Grid.fromPoints(pts, { ...fix, zOut });
+    for (const [u, v] of [[0, 0], [1.5, 1.5], [3, 3], [2.9, 0.1], [0, 3], [2.5, 2.5]] as const) {
+      close(grid.zAt(u, v), plan.zAt(u, v));
+      assert.deepEqual(grid.uvToXy(u, v), plan.uvToXy(u, v));
+    }
+    // în afară: punctul măsurat cântărește cel mai mult; xy rămâne același
+    close(grid.zAt(-0.6, 1.5), plan.zAt(-0.6, 1.5) - 5, 0.05);
+    close(grid.zAt(3.6, 1.5), plan.zAt(3.6, 1.5) + 4, 0.05);
+    close(grid.zAt(1.5, 3.8), plan.zAt(1.5, 3.8) - 10, 0.05);
+    const mid = grid.zAt(-0.6, 3.8) - plan.zAt(-0.6, 3.8);
+    assert.ok(mid < -5 && mid > -10, `între stânga și jos: ${mid}`);
+    assert.deepEqual(grid.uvToXy(-0.6, 1.5), plan.uvToXy(-0.6, 1.5));
+  });
+
   it("respinge celule coliniare sau prea puține", () => {
     assert.throws(() => Grid.fromPoints(taught(["r0c0", "r0c1", "r0c2"])), /necoliniare/);
     assert.throws(() => Grid.fromPoints(taught(["r0c0", "r2c2"])), /necoliniare/);

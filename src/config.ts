@@ -69,6 +69,9 @@ export const PLACE_GAP = -2.0; // cubul e eliberat la atâția mm față de în�
 // să cadă (echipa: „îi dă drumul prea devreme”), acum coboară până atinge foaia și apasă ușor
 export const GRASP_DZ = 3.0; // corecție fină a înălțimii de prindere (+ = mai sus); 3 mm: degetele departe de foaie
 export const TRANSIT_MIN_Z = 70.0; // înălțimea minimă a ghearei la deplasări laterale
+// Pick-ul (doar el) primește poziții uv până la atâtea celule în afara caroiajului: cuburile scoase lângă caroiaj, în
+// stânga, în dreapta sau spre robot (sortarea, 2026-10-30). Place rămâne în caroiaj (uv 0..3).
+export const PICK_OUTSIDE_CELLS = 3;
 
 // ---------------------------------------------------------------- CULORI
 export const CULORI = ["rosu", "galben", "verde", "albastru"] as const;

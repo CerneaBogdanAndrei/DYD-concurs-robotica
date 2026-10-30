@@ -20,7 +20,10 @@ export interface PickArgs {
   yaw_deg?: number;
   /** nivelul din stivă de unde se ia cubul (0 = pe masă). Extensie față de ArmInterface. */
   level?: number;
-  /** poziția exactă a cubului în celule (0..3), din viziune. Extensie față de ArmInterface. */
+  /**
+   * poziția exactă a cubului în celule (0..3), din viziune; la pick și până la PICK_OUTSIDE_CELLS celule în afara
+   * caroiajului (cuburile scoase lângă el). Extensie față de ArmInterface.
+   */
   uv?: [number, number] | null;
   /** deschiderea interioară de abordare, mm (regula A). Cere gheara calibrată în mm. Extensie. */
   grip_mm?: number | null;
@@ -83,16 +86,19 @@ export class ArmService {
     private readonly sim = false,
   ) {}
 
-  /** location + cell (+ level, uv) -> punct în spațiul robotului. */
-  resolve(location: string, cell: unknown, level: number, yawDeg: number, uv?: unknown): Target {
+  /** location + cell (+ level, uv) -> punct în spațiul robotului. `outside` = câte celule poate ieși uv din caroiaj. */
+  resolve(location: string, cell: unknown, level: number, yawDeg: number, uv?: unknown, outside = 0): Target {
     if (typeof location !== "string" || location === "") throw new ArgumentError("location lipsește");
     const site = requireSite(this.calib(), location);
     if (site.kind === "grid") {
       const g = gridOf(site);
       let u, v;
       if (uv !== undefined && uv !== null) {
-        const ok = Array.isArray(uv) && uv.length === 2 && uv.every((v) => typeof v === "number" && v >= 0 && v <= 3);
-        if (!ok) throw new ArgumentError(`uv invalid: ${JSON.stringify(uv)} (trebuie [u, v] în 0..3)`);
+        const ok =
+          Array.isArray(uv) &&
+          uv.length === 2 &&
+          uv.every((v) => typeof v === "number" && v >= -outside && v <= 3 + outside);
+        if (!ok) throw new ArgumentError(`uv invalid: ${JSON.stringify(uv)} (trebuie [u, v] în ${-outside}..${3 + outside})`);
         [u, v] = uv as [number, number];
       } else {
         if (cell === undefined || cell === null) {
@@ -170,7 +176,7 @@ export class ArmService {
   async pick(args: PickArgs): Promise<Outcome> {
     const level = checkLevel(args.level ?? 0);
     const yaw = checkFinite("yaw_deg", args.yaw_deg ?? 0);
-    const t = this.resolve(args.location, args.cell, level, yaw, args.uv);
+    const t = this.resolve(args.location, args.cell, level, yaw, args.uv, C.PICK_OUTSIDE_CELLS);
     const grip = this.gripFor("grip_mm", args.grip_mm, C.APPROACH_MARGIN_MM, C.GRIP_OPEN);
     return this.attempt(() => this.robot.pick(t.x, t.y, t.z, t.yaw, grip));
   }
