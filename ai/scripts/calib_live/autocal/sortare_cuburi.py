@@ -42,6 +42,7 @@ import time
 import cv2
 import numpy as np
 
+import foaie_la_loc
 import traseu_cub
 from traseu_cub import CLIPPED, COL, GOOD_MARGIN_MM, GOOD_OFF_MM, GRAB, GRIP_EMPTY, HELD_MAX_RATIO, HERE, K_RANGE, \
     K_WRIST, LOCATION, MAX_FIX_YAW, MAX_FIXES, PRIOR_XY, ROOT, ROW, YAW_TOL, Cube, Sheet, analyses, corrected, \
@@ -72,6 +73,7 @@ FACE_MM = (23.0, 36.0)  # fața de sus întreagă (29 mm) se măsoară între ac
 LINE_PX = (25.0, 8.0)  # liniile găsite se potrivesc cu cele proiectate la atâția px (cu camera de la calibrare, reajustată)
 REFINE_MAX_PX = 4.0  # camera reajustată pe linii se folosește doar sub abaterea asta ...
 REFINE_MAX_MM = 12.0  # ... și dacă nu mută foaia mai mult de atât (1 grd la bază ~ 5 mm)
+SHEET_MOVED_MM = 4.0  # foaia (sau camera) mutată mai mult față de calibrarea vederilor: pick-ul ar fi greșit, se oprește
 # gheara la pick (GRIP_OPEN 60, necalibrată în mm): deschiderea interioară ~46-55 mm (din înclinarea degetelor
 # măsurată, 2026-10-30); pentru vecini contează cea mare, pentru cubul dintre degete cea mică
 FINGER_GAP_MM = (46.0, 55.0)
@@ -203,7 +205,8 @@ def refine(raws, prior):
     """Camera reajustată pe intersecțiile caroiajului care se văd în cadrele `raws` (aceeași poză; cuburile pot acoperi
     o parte din ele), în doi pași: liniile potrivite cu cele proiectate cu camera de la calibrare, apoi, mai strâns, cu
     cea reajustată. Cu doar 2-5 intersecții, camera de la calibrare doar se mută pe foaie cu abaterea lor medie (baza nu
-    revine exact: ~1 grd mută foaia ~5 mm, aproape o translație). -> (camera, text)."""
+    revine exact: ~1 grd mută foaia ~5 mm, aproape o translație). -> (camera, text, cât s-a mutat foaia față de
+    camera de la calibrare, mm, sau None)."""
     unds = [cv2.undistort(raw, K, DIST) for raw in raws]
     cam, rms, n = prior, None, 0
     for tol in LINE_PX:
@@ -217,19 +220,21 @@ def refine(raws, prior):
             if rms is None and seen >= 2:
                 d = (np.array(obj) - cam.to_sheet(img, 0.0)).mean(0)
                 spread = float(np.abs(np.array(obj) - cam.to_sheet(img, 0.0) - d).max())
-                if np.linalg.norm(d) <= REFINE_MAX_MM and spread <= 2.0:
+                moved_mm = float(np.linalg.norm(d))
+                if moved_mm <= REFINE_MAX_MM and spread <= 2.0:
                     moved = Camera(cam.rvec, -cam.R @ (cam.center + np.array([d[0], d[1], 0.0])))
-                    return moved, f"camera de la calibrare mutată pe foaie cu {np.linalg.norm(d):.1f} mm ({seen} intersecții)"
+                    return moved, f"camera de la calibrare mutată pe foaie cu {moved_mm:.1f} mm ({seen} intersecții)", moved_mm
             n = n or seen
             break
         cam, rms, _ = Camera.fit(obj, img, guess=cam)
         n = seen
     if rms is None:
-        return prior, f"camera de la calibrare ({n} intersecții văzute)"
+        return prior, f"camera de la calibrare ({n} intersecții văzute)", None
     shift = float(np.linalg.norm(cam.to_sheet([[320, 240]], -CUBE_MM) - prior.to_sheet([[320, 240]], -CUBE_MM)))
     if rms > REFINE_MAX_PX or shift > REFINE_MAX_MM:
-        return prior, f"camera de la calibrare (reajustată pe {n} intersecții ar fi {rms:.1f} px, {shift:.1f} mm)"
-    return cam, f"camera reajustată pe {n} intersecții ({rms:.1f} px, foaia mutată {shift:.1f} mm)"
+        return prior, f"camera de la calibrare (reajustată pe {n} intersecții ar fi {rms:.1f} px, {shift:.1f} mm)", (
+            shift if rms <= REFINE_MAX_PX else None)
+    return cam, f"camera reajustată pe {n} intersecții ({rms:.1f} px, foaia mutată {shift:.1f} mm)", shift
 
 
 def is_face(c):
@@ -267,11 +272,16 @@ def same_cubes(a, b, view):
 
 def view_cubes(view):
     """Cuburile din afara caroiajului văzute din `view`, la fel în două cadre (camera reajustată pe amândouă).
-    -> (cuburile, celelalte pete, text despre cameră), sau None."""
+    -> (cuburile, celelalte pete, text despre cameră), sau None. Se oprește dacă foaia (sau camera) s-a mutat peste
+    SHEET_MOVED_MM față de calibrarea vederii: pick-urile ar fi greșite."""
     prior = Camera.from_dict(VIEWS[view]["camera"])
     for _ in range(3):
         raws = raw_frames(2)
-        cam, info = refine(raws, prior)
+        cam, info, moved = refine(raws, prior)
+        if moved is not None and moved > SHEET_MOVED_MM:
+            post("beep", {"n": 4})
+            sys.exit(f"  {view}: {info}. Foaia (sau camera) s-a mutat cu {moved:.0f} mm față de calibrarea vederilor: "
+                     "opresc înainte de pick.")
         (a, _), (b, blobs) = [cubes_in(raw, cam) for raw in raws]
         pairs = same_cubes(a, b, view)
         if pairs is not None:
@@ -594,6 +604,11 @@ def check_grid(state, cube):
     cells, obs = grid_colors(lenient=True)
     if cells is None:
         sys.exit("Din poza de start două analize la rând nu dau aceleași celule ocupate: verificați caroiajul.")
+    ref = json.load(open(traseu_cub.REF.with_suffix(".json")))
+    dx, dy, ang = foaie_la_loc.offset(obs, cv2.getPerspectiveTransform(np.float32(ref["geometry"]["corners_px"]),
+                                                                       traseu_cub.UV))
+    say(f"  din poza de start, caroiajul față de imaginea de referință: {dx:+.1f} mm pe coloane, {dy:+.1f} mm spre "
+        f"robot, rotit {ang:+.2f} grd")
     vague = [f"r{c['row']}c{c['col']}" for c in obs["cells"] if weak(c, True) and AMBIGUOUS in c.get("reasons", [])]
     if vague:
         say(f"  {', '.join(vague)}: puțină culoare, fără un cub (un cub de lângă caroiaj?): luate ca goale")
